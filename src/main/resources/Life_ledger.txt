@@ -1,0 +1,43 @@
+Life_ledger
+├── .env
+├── .gitattributes
+├── .gitignore
+├── .mvn
+│   └── wrapper
+│       └── maven-wrapper.properties
+├── .vscode
+│   └── settings.json
+├── HELP.md
+├── mvnw
+├── mvnw.cmd
+├── pom.xml
+├── src
+│   ├── main
+│   │   ├── java
+│   │   │   └── com
+│   │   │       └── Life_ledger
+│   │   │           ├── config
+│   │   │           ├── controller
+│   │   │           ├── dto
+│   │   │           ├── entity
+│   │   │           ├── LifeLedgerBackendApplication.java
+│   │   │           ├── repository
+│   │   │           ├── security
+│   │   │           └── service
+│   │   └── resources
+│   │       ├── application.properties
+│   │       ├── static
+│   │       └── templates
+│   └── test
+│       └── java
+│           └── com
+│               └── Life_ledger
+│                   └── LifeLedgerBackendApplicationTests.java
+└── target
+    ├── classes
+    │   └── application.properties
+    ├── generated-sources
+    │   └── annotations
+    ├── generated-test-sources
+    │   └── test-annotations
+    └── test-classes
