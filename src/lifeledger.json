@@ -1,0 +1,154 @@
+{
+  "transactions": [
+    { "id": "t001", "merchant": "Swiggy", "amount": 249, "transactionDate": "2025-01-01", "transactionType": "Debit" },
+    { "id": "t002", "merchant": "Uber", "amount": 189, "transactionDate": "2025-01-01", "transactionType": "Debit" },
+    { "id": "t003", "merchant": "Domino's", "amount": 329, "transactionDate": "2025-01-02", "transactionType": "Debit" },
+    { "id": "t004", "merchant": "Starbucks", "amount": 255, "transactionDate": "2025-01-02", "transactionType": "Debit" },
+    { "id": "t005", "merchant": "Amazon", "amount": 1299, "transactionDate": "2025-01-02", "transactionType": "Debit" },
+    { "id": "t006", "merchant": "JioFiber", "amount": 999, "transactionDate": "2025-01-03", "transactionType": "Debit" },
+    { "id": "t007", "merchant": "Spotify", "amount": 129, "transactionDate": "2025-01-03", "transactionType": "Debit" },
+    { "id": "t008", "merchant": "D-Mart", "amount": 540, "transactionDate": "2025-01-03", "transactionType": "Debit" },
+    { "id": "t009", "merchant": "BookMyShow", "amount": 399, "transactionDate": "2025-01-04", "transactionType": "Debit" },
+    { "id": "t010", "merchant": "Subway", "amount": 160, "transactionDate": "2025-01-04", "transactionType": "Debit" },
+
+    { "id": "t011", "merchant": "Blinkit", "amount": 210, "transactionDate": "2025-01-05", "transactionType": "Debit" },
+    { "id": "t012", "merchant": "Flipkart", "amount": 799, "transactionDate": "2025-01-05", "transactionType": "Debit" },
+    { "id": "t013", "merchant": "Swiggy", "amount": 175, "transactionDate": "2025-01-06", "transactionType": "Debit" },
+    { "id": "t014", "merchant": "Medical Store", "amount": 230, "transactionDate": "2025-01-06", "transactionType": "Debit" },
+    { "id": "t015", "merchant": "Uber", "amount": 220, "transactionDate": "2025-01-07", "transactionType": "Debit" },
+    { "id": "t016", "merchant": "Reliance Trends", "amount": 1490, "transactionDate": "2025-01-07", "transactionType": "Debit" },
+    { "id": "t017", "merchant": "McDonald's", "amount": 230, "transactionDate": "2025-01-08", "transactionType": "Debit" },
+    { "id": "t018", "merchant": "OLA", "amount": 210, "transactionDate": "2025-01-08", "transactionType": "Debit" },
+    { "id": "t019", "merchant": "Amazon", "amount": 349, "transactionDate": "2025-01-09", "transactionType": "Debit" },
+    { "id": "t020", "merchant": "PVR", "amount": 450, "transactionDate": "2025-01-09", "transactionType": "Debit" },
+
+    { "id": "t021", "merchant": "Cafe Coffee Day", "amount": 145, "transactionDate": "2025-01-10", "transactionType": "Debit" },
+    { "id": "t022", "merchant": "Zomato", "amount": 299, "transactionDate": "2025-01-10", "transactionType": "Debit" },
+    { "id": "t023", "merchant": "D-Mart", "amount": 650, "transactionDate": "2025-01-11", "transactionType": "Debit" },
+    { "id": "t024", "merchant": "Spotify", "amount": 129, "transactionDate": "2025-01-11", "transactionType": "Debit" },
+    { "id": "t025", "merchant": "Swiggy", "amount": 250, "transactionDate": "2025-01-12", "transactionType": "Debit" },
+    { "id": "t026", "merchant": "Gym Membership", "amount": 999, "transactionDate": "2025-01-12", "transactionType": "Debit" },
+
+    { "id": "t027", "merchant": "Blinkit", "amount": 290, "transactionDate": "2025-01-13", "transactionType": "Debit" },
+    { "id": "t028", "merchant": "Flipkart", "amount": 550, "transactionDate": "2025-01-13", "transactionType": "Debit" },
+    { "id": "t029", "merchant": "Uber", "amount": 190, "transactionDate": "2025-01-14", "transactionType": "Debit" },
+    { "id": "t030", "merchant": "Domino's", "amount": 320, "transactionDate": "2025-01-14", "transactionType": "Debit" },
+
+    { "id": "t031", "merchant": "Starbucks", "amount": 230, "transactionDate": "2025-01-15", "transactionType": "Debit" },
+    { "id": "t032", "merchant": "Amazon", "amount": 1690, "transactionDate": "2025-01-15", "transactionType": "Debit" },
+    { "id": "t033", "merchant": "Zomato", "amount": 260, "transactionDate": "2025-01-16", "transactionType": "Debit" },
+    { "id": "t034", "merchant": "Medical Store", "amount": 190, "transactionDate": "2025-01-16", "transactionType": "Debit" },
+    { "id": "t035", "merchant": "Netflix", "amount": 499, "transactionDate": "2025-01-16", "transactionType": "Debit" },
+    { "id": "t036", "merchant": "D-Mart", "amount": 580, "transactionDate": "2025-01-17", "transactionType": "Debit" },
+
+    { "id": "t037", "merchant": "Uber", "amount": 205, "transactionDate": "2025-01-18", "transactionType": "Debit" },
+    { "id": "t038", "merchant": "McDonald's", "amount": 199, "transactionDate": "2025-01-18", "transactionType": "Debit" },
+    { "id": "t039", "merchant": "Swiggy", "amount": 175, "transactionDate": "2025-01-19", "transactionType": "Debit" },
+    { "id": "t040", "merchant": "Flipkart", "amount": 1250, "transactionDate": "2025-01-19", "transactionType": "Debit" },
+
+    { "id": "t041", "merchant": "Amazon", "amount": 899, "transactionDate": "2025-01-20", "transactionType": "Debit" },
+    { "id": "t042", "merchant": "OLA", "amount": 240, "transactionDate": "2025-01-20", "transactionType": "Debit" },
+    { "id": "t043", "merchant": "PVR", "amount": 410, "transactionDate": "2025-01-21", "transactionType": "Debit" },
+    { "id": "t044", "merchant": "Domino's", "amount": 330, "transactionDate": "2025-01-21", "transactionType": "Debit" },
+
+    { "id": "t045", "merchant": "Blinkit", "amount": 299, "transactionDate": "2025-01-22", "transactionType": "Debit" },
+    { "id": "t046", "merchant": "Cafe Coffee Day", "amount": 155, "transactionDate": "2025-01-22", "transactionType": "Debit" },
+    { "id": "t047", "merchant": "Amazon", "amount": 399, "transactionDate": "2025-01-23", "transactionType": "Debit" },
+    { "id": "t048", "merchant": "Starbucks", "amount": 245, "transactionDate": "2025-01-23", "transactionType": "Debit" },
+
+    { "id": "t049", "merchant": "Zomato", "amount": 299, "transactionDate": "2025-01-24", "transactionType": "Debit" },
+    { "id": "t050", "merchant": "Netflix", "amount": 499, "transactionDate": "2025-01-24", "transactionType": "Debit" },
+
+    { "id": "t051", "merchant": "Swiggy", "amount": 260, "transactionDate": "2025-01-25", "transactionType": "Debit" },
+    { "id": "t052", "merchant": "JioFiber", "amount": 999, "transactionDate": "2025-02-03", "transactionType": "Debit" },
+    { "id": "t053", "merchant": "Spotify", "amount": 129, "transactionDate": "2025-02-03", "transactionType": "Debit" },
+    { "id": "t054", "merchant": "Gym Membership", "amount": 999, "transactionDate": "2025-02-12", "transactionType": "Debit" },
+    { "id": "t055", "merchant": "Netflix", "amount": 499, "transactionDate": "2025-02-16", "transactionType": "Debit" },
+
+    { "id": "t056", "merchant": "Amazon", "amount": 89900, "transactionDate": "2025-02-20", "transactionType": "Debit" },
+    { "id": "t057", "merchant": "Uber", "amount": 220, "transactionDate": "2025-02-21", "transactionType": "Debit" },
+    { "id": "t058", "merchant": "Starbucks", "amount": 215, "transactionDate": "2025-02-21", "transactionType": "Debit" },
+    { "id": "t059", "merchant": "D-Mart", "amount": 640, "transactionDate": "2025-02-22", "transactionType": "Debit" },
+    { "id": "t060", "merchant": "Blinkit", "amount": 299, "transactionDate": "2025-02-22", "transactionType": "Debit" },
+
+    { "id": "t061", "merchant": "Swiggy", "amount": 289, "transactionDate": "2025-02-23", "transactionType": "Debit" },
+    { "id": "t062", "merchant": "Amazon", "amount": 450, "transactionDate": "2025-02-23", "transactionType": "Debit" },
+    { "id": "t063", "merchant": "Flipkart", "amount": 690, "transactionDate": "2025-02-24", "transactionType": "Debit" },
+    { "id": "t064", "merchant": "Zomato", "amount": 245, "transactionDate": "2025-02-24", "transactionType": "Debit" },
+    { "id": "t065", "merchant": "Uber", "amount": 215, "transactionDate": "2025-02-25", "transactionType": "Debit" },
+    { "id": "t066", "merchant": "OLA", "amount": 230, "transactionDate": "2025-02-25", "transactionType": "Debit" },
+    { "id": "t067", "merchant": "Medical Store", "amount": 320, "transactionDate": "2025-02-26", "transactionType": "Debit" },
+    { "id": "t068", "merchant": "Starbucks", "amount": 235, "transactionDate": "2025-02-26", "transactionType": "Debit" },
+
+    { "id": "t069", "merchant": "Amazon", "amount": 1199, "transactionDate": "2025-02-27", "transactionType": "Debit" },
+    { "id": "t070", "merchant": "PVR", "amount": 430, "transactionDate": "2025-02-27", "transactionType": "Debit" },
+
+    { "id": "t071", "merchant": "Netflix", "amount": 499, "transactionDate": "2025-03-16", "transactionType": "Debit" },
+    { "id": "t072", "merchant": "Spotify", "amount": 129, "transactionDate": "2025-03-03", "transactionType": "Debit" },
+    { "id": "t073", "merchant": "JioFiber", "amount": 999, "transactionDate": "2025-03-03", "transactionType": "Debit" },
+    { "id": "t074", "merchant": "Gym Membership", "amount": 999, "transactionDate": "2025-03-12", "transactionType": "Debit" },
+
+    { "id": "t075", "merchant": "Blinkit", "amount": 310, "transactionDate": "2025-03-10", "transactionType": "Debit" },
+    { "id": "t076", "merchant": "Amazon", "amount": 1290, "transactionDate": "2025-03-11", "transactionType": "Debit" },
+    { "id": "t077", "merchant": "Zomato", "amount": 260, "transactionDate": "2025-03-11", "transactionType": "Debit" },
+    { "id": "t078", "merchant": "Swiggy", "amount": 240, "transactionDate": "2025-03-12", "transactionType": "Debit" },
+    { "id": "t079", "merchant": "Uber", "amount": 199, "transactionDate": "2025-03-12", "transactionType": "Debit" },
+    { "id": "t080", "merchant": "Flipkart", "amount": 899, "transactionDate": "2025-03-13", "transactionType": "Debit" },
+
+    { "id": "t081", "merchant": "Amazon", "amount": 1599, "transactionDate": "2025-03-14", "transactionType": "Debit" },
+    { "id": "t082", "merchant": "Starbucks", "amount": 260, "transactionDate": "2025-03-14", "transactionType": "Debit" },
+    { "id": "t083", "merchant": "D-Mart", "amount": 730, "transactionDate": "2025-03-15", "transactionType": "Debit" },
+    { "id": "t084", "merchant": "Blinkit", "amount": 280, "transactionDate": "2025-03-15", "transactionType": "Debit" },
+
+    { "id": "t085", "merchant": "OLA", "amount": 215, "transactionDate": "2025-03-16", "transactionType": "Debit" },
+    { "id": "t086", "merchant": "Medical Store", "amount": 250, "transactionDate": "2025-03-16", "transactionType": "Debit" },
+
+    { "id": "t087", "merchant": "Swiggy", "amount": 240, "transactionDate": "2025-03-17", "transactionType": "Debit" },
+    { "id": "t088", "merchant": "Netflix", "amount": 499, "transactionDate": "2025-04-16", "transactionType": "Debit" },
+    { "id": "t089", "merchant": "Spotify", "amount": 129, "transactionDate": "2025-04-03", "transactionType": "Debit" },
+    { "id": "t090", "merchant": "JioFiber", "amount": 999, "transactionDate": "2025-04-03", "transactionType": "Debit" },
+
+    { "id": "t091", "merchant": "Amazon", "amount": 1450, "transactionDate": "2025-04-05", "transactionType": "Debit" },
+    { "id": "t092", "merchant": "PVR", "amount": 480, "transactionDate": "2025-04-05", "transactionType": "Debit" },
+    { "id": "t093", "merchant": "McDonald's", "amount": 240, "transactionDate": "2025-04-06", "transactionType": "Debit" },
+    { "id": "t094", "merchant": "Flipkart", "amount": 799, "transactionDate": "2025-04-06", "transactionType": "Debit" },
+
+    { "id": "t095", "merchant": "OLA", "amount": 220, "transactionDate": "2025-04-07", "transactionType": "Debit" },
+    { "id": "t096", "merchant": "Blinkit", "amount": 249, "transactionDate": "2025-04-07", "transactionType": "Debit" },
+
+    { "id": "t097", "merchant": "Starbucks", "amount": 250, "transactionDate": "2025-04-08", "transactionType": "Debit" },
+    { "id": "t098", "merchant": "Amazon", "amount": 2250, "transactionDate": "2025-04-08", "transactionType": "Debit" },
+
+    { "id": "t099", "merchant": "Zomato", "amount": 280, "transactionDate": "2025-04-09", "transactionType": "Debit" },
+    { "id": "t100", "merchant": "D-Mart", "amount": 720, "transactionDate": "2025-04-09", "transactionType": "Debit" },
+
+    { "id": "t101", "merchant": "Swiggy", "amount": 250, "transactionDate": "2025-04-10", "transactionType": "Debit" },
+    { "id": "t102", "merchant": "Uber", "amount": 210, "transactionDate": "2025-04-10", "transactionType": "Debit" },
+
+    { "id": "t103", "merchant": "Netflix", "amount": 499, "transactionDate": "2025-05-16", "transactionType": "Debit" },
+    { "id": "t104", "merchant": "Spotify", "amount": 129, "transactionDate": "2025-05-03", "transactionType": "Debit" },
+    { "id": "t105", "merchant": "JioFiber", "amount": 999, "transactionDate": "2025-05-03", "transactionType": "Debit" },
+
+    { "id": "t106", "merchant": "Amazon", "amount": 349, "transactionDate": "2025-05-04", "transactionType": "Debit" },
+    { "id": "t107", "merchant": "Starbucks", "amount": 270, "transactionDate": "2025-05-04", "transactionType": "Debit" },
+    { "id": "t108", "merchant": "Flipkart", "amount": 799, "transactionDate": "2025-05-05", "transactionType": "Debit" },
+    { "id": "t109", "merchant": "Blinkit", "amount": 220, "transactionDate": "2025-05-05", "transactionType": "Debit" },
+
+    { "id": "t110", "merchant": "McDonald's", "amount": 240, "transactionDate": "2025-05-06", "transactionType": "Debit" },
+    { "id": "t111", "merchant": "Amazon", "amount": 3100, "transactionDate": "2025-05-06", "transactionType": "Debit" },
+
+    { "id": "t112", "merchant": "Swiggy", "amount": 239, "transactionDate": "2025-05-07", "transactionType": "Debit" },
+    { "id": "t113", "merchant": "Uber", "amount": 199, "transactionDate": "2025-05-07", "transactionType": "Debit" },
+
+    { "id": "t114", "merchant": "D-Mart", "amount": 830, "transactionDate": "2025-05-08", "transactionType": "Debit" },
+    { "id": "t115", "merchant": "Blinkit", "amount": 260, "transactionDate": "2025-05-08", "transactionType": "Debit" },
+
+    { "id": "t116", "merchant": "Starbucks", "amount": 255, "transactionDate": "2025-05-09", "transactionType": "Debit" },
+    { "id": "t117", "merchant": "Flipkart", "amount": 650, "transactionDate": "2025-05-09", "transactionType": "Debit" },
+
+    { "id": "t118", "merchant": "Amazon", "amount": 4200, "transactionDate": "2025-05-10", "transactionType": "Debit" },
+    { "id": "t119", "merchant": "Swiggy", "amount": 260, "transactionDate": "2025-05-10", "transactionType": "Debit" },
+
+    { "id": "t120", "merchant": "Netflix", "amount": 499, "transactionDate": "2025-06-16", "transactionType": "Debit" }
+  ]
+}
