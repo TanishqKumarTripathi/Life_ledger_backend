@@ -39,7 +39,6 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String requestPath = request.getRequestURI();
 
-        // Skip JWT validation for public URLs
         if (isPublicUrl(requestPath)) {
             filterChain.doFilter(request, response);
             return;

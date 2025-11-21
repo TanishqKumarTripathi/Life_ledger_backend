@@ -21,32 +21,72 @@ public class AccountServiceImpl implements AccountService {
 
     private final BankAccountRepository bankAccountRepository;
     private final UserRepository userRepository;
-    private final EncryptionUtil encryptionUtil; // custom utility to encrypt/decrypt
+    private final EncryptionUtil encryptionUtil;
 
     @Override
     public BankAccount createAccount(Long userId, AccountRequest request) {
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         BankAccount account = AccountMapper.toEntity(request);
         account.setUser(user);
 
-        // Encrypt full account number and store last 4 digits
+        // encrypt account number
         String encryptedNumber = encryptionUtil.encrypt(request.getAccountNumber());
         account.setEncryptedAccountNumber(encryptedNumber);
+
         account.setLast4Digits(request.getAccountNumber()
                 .substring(request.getAccountNumber().length() - 4));
 
-        BankAccount saved = bankAccountRepository.save(account);
-        // return AccountMapper.toResponse(saved);
-        return saved;
+        return bankAccountRepository.save(account);
     }
 
     @Override
     public List<AccountResponse> getUserAccounts(Long userId) {
-        List<BankAccount> accounts = bankAccountRepository.findByUserId(userId);
-        return accounts.stream()
+        return bankAccountRepository.findByUserId(userId)
+                .stream()
                 .map(AccountMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public BankAccount updateAccount(Long userId, AccountRequest request) {
+
+        BankAccount account = bankAccountRepository.findById(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("Account not found"));
+
+        if (!account.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized update");
+        }
+
+        account.setAccountName(request.getAccountName());
+        account.setBankName(request.getBankName());
+
+        // update encryption only if number changed
+        if (request.getAccountNumber() != null) {
+            String encrypted = encryptionUtil.encrypt(request.getAccountNumber());
+            account.setEncryptedAccountNumber(encrypted);
+
+            account.setLast4Digits(
+                    request.getAccountNumber()
+                            .substring(request.getAccountNumber().length() - 4));
+        }
+
+        return bankAccountRepository.save(account);
+    }
+
+    @Override
+    public String deleteAccount(Long userId, BankAccount account) {
+
+        BankAccount existing = bankAccountRepository.findById(account.getId())
+                .orElseThrow(() -> new RuntimeException("Account not found"));
+
+        if (!existing.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized deletion");
+        }
+
+        bankAccountRepository.delete(existing);
+        return "Account deleted";
     }
 }

@@ -10,4 +10,8 @@ public interface AccountService {
     BankAccount createAccount(Long userId, AccountRequest request);
 
     List<AccountResponse> getUserAccounts(Long userId);
+
+    BankAccount updateAccount(Long userId, AccountRequest request);
+
+    String deleteAccount(Long userId, BankAccount account);
 }

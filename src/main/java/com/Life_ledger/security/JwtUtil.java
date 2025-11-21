@@ -70,8 +70,7 @@ public class JwtUtil {
         return extractClaim(token, Claims::getExpiration).before(new Date());
     }
 
-    // Optional helper to get userId if needed in some endpoints
     public Long getUserIdFromToken(String token, User user) {
-        return user.getId(); // still can store id in claims if needed
+        return user.getId();
     }
 }

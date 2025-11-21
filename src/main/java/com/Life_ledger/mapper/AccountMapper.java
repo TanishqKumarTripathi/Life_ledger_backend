@@ -21,4 +21,15 @@ public class AccountMapper {
                 .last4Digits(account.getLast4Digits())
                 .build();
     }
+
+    public static AccountResponse fromEntity(BankAccount account) {
+        if (account == null)
+            return null;
+        return AccountResponse.builder()
+                .id(account.getId())
+                .accountName(account.getAccountName())
+                .bankName(account.getBankName())
+                .last4Digits(account.getLast4Digits())
+                .build();
+    }
 }
