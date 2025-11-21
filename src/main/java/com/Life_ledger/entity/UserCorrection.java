@@ -1,5 +1,7 @@
 package com.Life_ledger.entity;
 
+import java.math.BigDecimal;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,7 +18,13 @@ public class UserCorrection {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String correctedMerchent;
+
     private String correctedCategory;
+
+    private BigDecimal correctedAmount;
+
+    private String notes;
 
     @OneToOne
     @JoinColumn(name = "transaction_id")
