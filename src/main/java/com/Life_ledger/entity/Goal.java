@@ -30,7 +30,7 @@ public class Goal {
     //private String description;
     private BigDecimal targetAmount;
     private BigDecimal currentAmount;
-    private String category; // e.g., Food, Travel
+    private String category;
     private LocalDate startDate;
     private LocalDate deadline;
 

@@ -21,18 +21,12 @@ public class FileController {
     private final FileProcessingService processingService;
     private final RuleExecutorService ruleExecutor;
 
-    /**
-     * STEP 1 → Upload PDF file
-     */
     @PostMapping("/upload")
     public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file) {
         String fileId = fileService.saveUploadedFile(file);
         return ResponseEntity.ok(new FileUploadResponse(fileId, "File uploaded"));
     }
 
-    /**
-     * STEP 2 → Extract text from uploaded PDF
-     */
     @PostMapping("/upload/{fileId}/extract")
     public ResponseEntity<?> extract(
             @PathVariable String fileId,
@@ -46,9 +40,6 @@ public class FileController {
         ));
     }
 
-    /**
-     * STEP 3 → Parse extracted text using AI + Save transactions
-     */
     @PostMapping("/upload/{fileId}/parse")
     public ResponseEntity<?> parse(
             @PathVariable String fileId,
@@ -62,9 +53,6 @@ public class FileController {
         ));
     }
 
-    /**
-     * STEP 4 → Apply all rules (merchant/category/amount/recurring/anomaly)
-     */
     @PostMapping("/upload/{fileId}/rules")
     public ResponseEntity<?> applyRules(@PathVariable Long fileId) {
         List<Transaction> fileImportId = ruleExecutor.applyRulesForFileImport(fileId);
