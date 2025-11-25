@@ -17,7 +17,7 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name; // Food, Travel, Utilities, etc.
+    private String name;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
@@ -28,4 +28,7 @@ public class Category {
 
     @OneToMany(mappedBy = "category")
     private List<Transaction> transactions;
+    public Category(String name) {
+        this.name = name;
+    }
 }

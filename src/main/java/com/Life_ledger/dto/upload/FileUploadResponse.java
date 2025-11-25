@@ -1,5 +1,13 @@
 package com.Life_ledger.dto.upload;
 
-public class FileUploadResponse {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class FileUploadResponse {
+    private String message;
+    private String fileId;
 }

@@ -7,3 +7,4 @@ import com.Life_ledger.entity.RecurringPattern;
 public interface RecurringPatternRepository extends JpaRepository<RecurringPattern, Long> {
 
 }
+

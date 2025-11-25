@@ -64,7 +64,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public List<TransactionResponse> getAllTransactions(Long userId, Long bankAccountId, Long categoryId) {
         return transactionRepository.findAll().stream()
-                .filter(t -> t.getBankAccount().getUser().getId().equals(userId))
+               // .filter(t -> t.getBankAccount()!=null && t.getBankAccount().getUser()!=null && t.getBankAccount().getUser().getId().equals(userId))
                 .filter(t -> bankAccountId == null || t.getBankAccount().getId().equals(bankAccountId))
                 .filter(t -> categoryId == null || t.getCategory().getId().equals(categoryId))
                 .map(transactionMapper::toResponse)
@@ -107,7 +107,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         UserCorrection correction = UserCorrection.builder()
                 .transaction(txn)
-                .correctedMerchent(request.getCorrectedMerchant())
+                .correctedMerchant(request.getCorrectedMerchant())
                 .correctedAmount(request.getCorrectedAmount())
                 .notes(request.getNotes())
                 .build();
@@ -118,7 +118,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         return UserCorrectionResponse.builder()
                 .id(saved.getId())
-                .correctedMerchant(saved.getCorrectedMerchent())
+                .correctedMerchant(saved.getCorrectedMerchant())
                 .correctedAmount(saved.getCorrectedAmount())
                 .notes(saved.getNotes())
                 .transactionId(txn.getId())
@@ -137,7 +137,7 @@ public class TransactionServiceImpl implements TransactionService {
         UserCorrection c = txn.getCorrection();
         return UserCorrectionResponse.builder()
                 .id(c.getId())
-                .correctedMerchant(c.getCorrectedMerchent())
+                .correctedMerchant(c.getCorrectedMerchant())
                 .correctedAmount(c.getCorrectedAmount())
                 .notes(c.getNotes())
                 .transactionId(txn.getId())

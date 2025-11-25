@@ -1,26 +1,35 @@
 package com.Life_ledger.entity;
 
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-
 @Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Insight {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
+    @JoinColumn(name = "user_id")
     private User user;
 
     @OneToMany
-    private List<Transaction> relatedTransactions; // optional
+    @JoinColumn(name = "insight_id")
+    private List<Transaction> relatedTransactions;
 
-    private String aiText; // AI-generated summary
+    private String aiText;
     private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 }

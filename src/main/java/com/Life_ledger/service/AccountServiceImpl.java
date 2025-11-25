@@ -51,16 +51,15 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public BankAccount updateAccount(Long userId, AccountRequest request) {
+    public BankAccount updateAccount(Long userId, Long accountId, AccountRequest request) {
 
-        BankAccount account = bankAccountRepository.findById(request.getUserId())
+        BankAccount account = bankAccountRepository.findById(accountId)
                 .orElseThrow(() -> new RuntimeException("Account not found"));
 
         if (!account.getUser().getId().equals(userId)) {
             throw new RuntimeException("Unauthorized update");
         }
 
-        account.setAccountName(request.getAccountName());
         account.setBankName(request.getBankName());
 
         // update encryption only if number changed
@@ -77,9 +76,9 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public String deleteAccount(Long userId, BankAccount account) {
+    public String deleteAccount(Long userId, Long accountId) {
 
-        BankAccount existing = bankAccountRepository.findById(account.getId())
+        BankAccount existing = bankAccountRepository.findById(accountId)
                 .orElseThrow(() -> new RuntimeException("Account not found"));
 
         if (!existing.getUser().getId().equals(userId)) {

@@ -4,6 +4,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.Life_ledger.entity.FileImport;
 
-public interface FileImportRepository extends JpaRepository<FileImport, Long> {
+import java.util.Optional;
 
+public interface FileImportRepository extends JpaRepository<FileImport, Long> {
+    Optional<FileImport> findByFileId(String fileId);
 }
