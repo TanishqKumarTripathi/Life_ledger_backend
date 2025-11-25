@@ -19,6 +19,10 @@ public class Category {
 
     private String name; // Food, Travel, Utilities, etc.
 
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
     private List<SubCategory> subCategories;
 

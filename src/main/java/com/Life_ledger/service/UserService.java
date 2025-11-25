@@ -2,6 +2,7 @@ package com.Life_ledger.service;
 
 import com.Life_ledger.dto.auth.LoginRequest;
 import com.Life_ledger.dto.auth.SignupRequest;
+import com.Life_ledger.dto.user.UserInfoDto;
 import com.Life_ledger.dto.user.UserResponse;
 import com.Life_ledger.dto.auth.AuthResponse;
 import com.Life_ledger.entity.User;
@@ -20,4 +21,6 @@ public interface UserService {
     UserResponse updateUser(Long userId, UserResponse user);
 
     User getUserByEmail(String email);
+
+    UserInfoDto getFullUserInfo(Long userId);
 }
