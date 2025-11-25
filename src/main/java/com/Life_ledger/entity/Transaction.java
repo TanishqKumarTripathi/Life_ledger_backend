@@ -5,6 +5,8 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import com.Life_ledger.Enum.TransactionEnum;
+
 @Entity
 @Table(name = "transactions")
 @Getter
@@ -20,7 +22,13 @@ public class Transaction {
 
     private String merchant;
 
+    @Column(unique = true)
+    private String reference;
+
     private BigDecimal amount;
+
+    @Enumerated(EnumType.STRING)
+    private TransactionEnum typeTransaction;
 
     private LocalDate date;
 
