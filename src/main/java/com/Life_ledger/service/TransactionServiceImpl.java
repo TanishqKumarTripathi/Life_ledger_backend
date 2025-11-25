@@ -107,7 +107,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         UserCorrection correction = UserCorrection.builder()
                 .transaction(txn)
-                .correctedMerchent(request.getCorrectedMerchant())
+                .correctedMerchant(request.getCorrectedMerchant())
                 .correctedAmount(request.getCorrectedAmount())
                 .notes(request.getNotes())
                 .build();
@@ -118,7 +118,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         return UserCorrectionResponse.builder()
                 .id(saved.getId())
-                .correctedMerchant(saved.getCorrectedMerchent())
+                .correctedMerchant(saved.getCorrectedMerchant())
                 .correctedAmount(saved.getCorrectedAmount())
                 .notes(saved.getNotes())
                 .transactionId(txn.getId())
@@ -137,7 +137,7 @@ public class TransactionServiceImpl implements TransactionService {
         UserCorrection c = txn.getCorrection();
         return UserCorrectionResponse.builder()
                 .id(c.getId())
-                .correctedMerchant(c.getCorrectedMerchent())
+                .correctedMerchant(c.getCorrectedMerchant())
                 .correctedAmount(c.getCorrectedAmount())
                 .notes(c.getNotes())
                 .transactionId(txn.getId())

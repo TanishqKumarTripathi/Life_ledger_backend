@@ -11,7 +11,7 @@ public interface AccountService {
 
     List<AccountResponse> getUserAccounts(Long userId);
 
-    BankAccount updateAccount(Long userId, AccountRequest request);
+    BankAccount updateAccount(Long userId, Long accountId, AccountRequest request);
 
-    String deleteAccount(Long userId, BankAccount account);
+    String deleteAccount(Long userId, Long accountId);
 }

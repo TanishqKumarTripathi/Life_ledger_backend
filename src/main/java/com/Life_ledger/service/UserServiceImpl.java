@@ -43,12 +43,8 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(request.getPhoneNumber())
                 .build();
 
-        // Save and capture the saved entity with ID
+
         User savedUser = userRepository.save(user);
-
-        // Generate JWT after signup using savedUser
-        // String token = jwtUtil.generateToken(savedUser);
-
         return AuthResponse.builder()
                 .userId(savedUser.getId())
                 .email(savedUser.getEmail())

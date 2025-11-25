@@ -8,7 +8,6 @@ public class AccountMapper {
 
     public static BankAccount toEntity(AccountRequest request) {
         return BankAccount.builder()
-                .accountName(request.getAccountName())
                 .bankName(request.getBankName())
                 .build();
     }
@@ -16,7 +15,6 @@ public class AccountMapper {
     public static AccountResponse toResponse(BankAccount account) {
         return AccountResponse.builder()
                 .id(account.getId())
-                .accountName(account.getAccountName())
                 .bankName(account.getBankName())
                 .last4Digits(account.getLast4Digits())
                 .build();
@@ -27,7 +25,6 @@ public class AccountMapper {
             return null;
         return AccountResponse.builder()
                 .id(account.getId())
-                .accountName(account.getAccountName())
                 .bankName(account.getBankName())
                 .last4Digits(account.getLast4Digits())
                 .build();

@@ -18,7 +18,7 @@ public class UserCorrection {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String correctedMerchent;
+    private String correctedMerchant;
 
     private String correctedCategory;
 

@@ -17,11 +17,14 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name; // Food, Travel, Utilities, etc.
+    private String name;
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
     private List<SubCategory> subCategories;
 
     @OneToMany(mappedBy = "category")
     private List<Transaction> transactions;
+    public Category(String name) {
+        this.name = name;
+    }
 }

@@ -1,21 +1,13 @@
 package com.Life_ledger.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
+import lombok.*;
 import java.util.Collection;
-// import lombok.*;
 import java.util.List;
-
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 @Entity
-
 @Table(name = "users")
 @Getter
 @Setter
@@ -81,4 +73,11 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
+
+    @Override
+    public String getPassword() {
+        return password;
+    }
+
+
 }

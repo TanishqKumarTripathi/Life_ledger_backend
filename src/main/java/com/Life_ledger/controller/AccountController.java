@@ -90,10 +90,7 @@ public class AccountController {
         token = token.substring(7);
         Long userId = jwtUtils.extractUserId(token, userRepository);
 
-        BankAccount account = bankAccountRepository.findById(accountId)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
-
-        String msg = accountService.deleteAccount(userId, account);
+        String msg = accountService.deleteAccount(userId, accountId);
 
         return ResponseEntity.ok(msg);
     }
@@ -107,9 +104,7 @@ public class AccountController {
         token = token.substring(7);
         Long userId = jwtUtils.extractUserId(token, userRepository);
 
-        request.setUserId(accountId); // set id inside request
-
-        BankAccount updated = accountService.updateAccount(userId, request);
+        BankAccount updated = accountService.updateAccount(userId, accountId, request);
 
         return ResponseEntity.ok(AccountMapper.fromEntity(updated));
     }

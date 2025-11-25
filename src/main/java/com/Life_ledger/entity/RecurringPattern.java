@@ -7,8 +7,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "recurring_patterns")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
