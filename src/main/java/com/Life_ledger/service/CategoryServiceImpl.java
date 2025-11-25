@@ -23,11 +23,22 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public CategoryResponse createCategory(Long userId, CategoryRequest request) {
 
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            throw new RuntimeException("Category name cannot be empty");
+        }
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Invalid user"));
 
+        // Check duplicate category for THIS user
+        categoryRepository.findByUser_IdAndNameIgnoreCase(userId, request.getName())
+                .ifPresent(c -> {
+                    throw new RuntimeException("Category already exists");
+                });
+
         Category category = Category.builder()
-                .name(request.getName())
+                .name(request.getName().trim())
+                .user(user) // ★ IMPORTANT – assign user
                 .build();
 
         Category saved = categoryRepository.save(category);
@@ -38,12 +49,17 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponse getCategory(Long userId, Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        if (!category.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized access to category");
+        }
+
         return CategoryMapper.toResponse(category);
     }
 
     @Override
     public List<CategoryResponse> getAllCategories(Long userId) {
-        return categoryRepository.findAll()
+        return categoryRepository.findAllByUser_Id(userId)
                 .stream()
                 .map(CategoryMapper::toResponse)
                 .collect(Collectors.toList());
@@ -51,10 +67,24 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public CategoryResponse updateCategory(Long userId, Long categoryId, CategoryRequest request) {
+
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("Category not found"));
 
-        if (request.getName() != null) {
+        if (!category.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized access");
+        }
+
+        if (request.getName() != null && !request.getName().trim().isEmpty()) {
+
+            // Duplicate name check
+            categoryRepository.findByUser_IdAndNameIgnoreCase(userId, request.getName())
+                    .ifPresent(existing -> {
+                        if (!existing.getId().equals(categoryId)) {
+                            throw new RuntimeException("Category already exists");
+                        }
+                    });
+
             category.setName(request.getName());
         }
 
@@ -66,6 +96,10 @@ public class CategoryServiceImpl implements CategoryService {
     public void deleteCategory(Long userId, Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        if (!category.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized access");
+        }
 
         categoryRepository.delete(category);
     }

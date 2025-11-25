@@ -5,6 +5,8 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import com.Life_ledger.Enum.TransactionEnum;
+
 @Entity
 @Table(name = "transactions")
 @Getter
@@ -17,15 +19,25 @@ public class Transaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String merchant;
+
+    @Column(unique = true)
+    private String reference;
+
     private BigDecimal amount;
+
+    @Enumerated(EnumType.STRING)
+    private TransactionEnum typeTransaction;
+
     private LocalDate date;
-    @Column(length = 1000)
+
     private String notes;
+
     private boolean recurring;
+
     private boolean anomaly;
-    @Column(length = 2000)
-    private String rawText;
+
     @ManyToOne
     @JoinColumn(name = "bank_account_id")
     private BankAccount bankAccount;
@@ -40,6 +52,4 @@ public class Transaction {
 
     @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL)
     private UserCorrection correction;
-
-
 }

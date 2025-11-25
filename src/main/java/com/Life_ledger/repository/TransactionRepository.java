@@ -1,15 +1,13 @@
 package com.Life_ledger.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-
 import com.Life_ledger.entity.Transaction;
-
-import java.math.BigDecimal;
 import java.util.List;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
-    List<Transaction> findByFileImportId(Long fileImportId);
-    List<Transaction> findByMerchantAndAmount(String merchant, BigDecimal amount);
 
-    long countByFileImportId(Long fileImportId);
+    boolean existsByReference(String reference);
+
+    // Fetch all transactions where bankAccount.user.id = :userId
+    List<Transaction> findAllByBankAccount_User_Id(Long userId);
 }
