@@ -61,7 +61,6 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(request.getPhoneNumber())
                 .build();
 
-
         User savedUser = userRepository.save(user);
         return AuthResponse.builder()
                 .userId(savedUser.getId())
@@ -158,7 +157,7 @@ public class UserServiceImpl implements UserService {
                 .map(transactionMapper::toResponse)
                 .collect(Collectors.toList());
 
-        List<GoalResponse> goals = goalRepository.findAllByUserId(userId)
+        List<GoalResponse> goals = goalRepository.findByUser(user)
                 .stream()
                 .map(GoalMapper::toDto)
                 .collect(Collectors.toList());

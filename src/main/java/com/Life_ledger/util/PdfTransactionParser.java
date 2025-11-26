@@ -11,7 +11,7 @@ public class PdfTransactionParser {
 
     private static final Pattern AMOUNT = Pattern.compile("([0-9]{1,3}(?:,[0-9]{3})*(?:\\.\\d{1,2})?)");
     private static final Pattern DATE = Pattern.compile("(\\d{1,2}[\\-/]\\d{1,2}[\\-/]\\d{2,4})");
-    private static final DateTimeFormatter[] DATE_FORMATS = new DateTimeFormatter[]{
+    private static final DateTimeFormatter[] DATE_FORMATS = new DateTimeFormatter[] {
             DateTimeFormatter.ofPattern("d-M-uuuu"),
             DateTimeFormatter.ofPattern("d/M/uuuu"),
             DateTimeFormatter.ofPattern("d-M-uu"),
@@ -20,24 +20,25 @@ public class PdfTransactionParser {
 
     public static List<Transaction> parse(String extractedText) {
         List<Transaction> out = new ArrayList<>();
-        if (extractedText == null || extractedText.isBlank()) return out;
+        if (extractedText == null || extractedText.isBlank())
+            return out;
 
         String[] lines = extractedText.split("\\r?\\n");
         for (String line : lines) {
-            if (line.trim().isEmpty()) continue;
+            if (line.trim().isEmpty())
+                continue;
             Transaction t = new Transaction();
-            t.setRawText(line);
+            // t.setRawText(line);
 
-
-            Matcher mAmt = AMOUNT.matcher(line.replaceAll("₹|INR|Rs\\.?",""));
+            Matcher mAmt = AMOUNT.matcher(line.replaceAll("₹|INR|Rs\\.?", ""));
             if (mAmt.find()) {
                 String s = mAmt.group(1).replaceAll(",", "");
                 try {
                     BigDecimal bd = new BigDecimal(s);
                     t.setAmount(bd);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
-
 
             Matcher mDate = DATE.matcher(line);
             if (mDate.find()) {
@@ -45,7 +46,6 @@ public class PdfTransactionParser {
                 LocalDate parsed = tryParseDate(d);
                 t.setDate(parsed);
             }
-
 
             String merchant = extractMerchant(line);
             t.setMerchant(merchant);
@@ -64,7 +64,8 @@ public class PdfTransactionParser {
             try {
                 String normalized = s.replace('.', '-');
                 return LocalDate.parse(normalized, fmt);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
         return null;
     }
@@ -72,9 +73,10 @@ public class PdfTransactionParser {
     private static String extractMerchant(String line) {
         String r = line.replaceAll("\\d{1,2}[\\-/]\\d{1,2}[\\-/]\\d{2,4}", " ");
         r = r.replaceAll("([0-9]{1,3}(?:,[0-9]{3})*(?:\\.\\d{1,2})?)", " ");
-        r = r.replaceAll("₹|INR|Rs\\.?"," ");
+        r = r.replaceAll("₹|INR|Rs\\.?", " ");
         r = r.replaceAll("[^A-Za-z0-9 &]", " ").trim();
-        if (r.length() > 80) r = r.substring(0, 80);
+        if (r.length() > 80)
+            r = r.substring(0, 80);
         return r.isEmpty() ? null : r;
     }
 }

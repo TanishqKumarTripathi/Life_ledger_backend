@@ -33,11 +33,19 @@ public class GoalMapper {
                 .progressPercent(
                         goal.getTargetAmount() != null && goal.getTargetAmount().compareTo(BigDecimal.ZERO) > 0
                                 ? goal.getCurrentAmount().doubleValue() / goal.getTargetAmount().doubleValue() * 100
-                                : 0.0
-                )
+                                : 0.0)
                 .build();
     }
 
+    public static GoalResponse toDto(Goal goal) {
+        if (goal == null)
+            return null;
 
-
+        return GoalResponse.builder()
+                .id(goal.getId())
+                .name(goal.getName())
+                .targetAmount(goal.getTargetAmount())
+                .currentAmount(goal.getCurrentAmount())
+                .build();
+    }
 }

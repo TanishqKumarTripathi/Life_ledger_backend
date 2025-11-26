@@ -1,10 +1,8 @@
-package com.Life_ledger.service.impl;
+package com.Life_ledger.service;
 
-import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.RecurringPattern;
 import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.RecurringPatternRepository;
-import com.Life_ledger.service.RecurringPatternService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +13,7 @@ import java.util.List;
 public class RecurringPatternServiceImpl implements RecurringPatternService {
 
     private final RecurringPatternRepository recurringPatternRepository;
-    private final BankAccountRepository bankAccountRepository;
+    // private final BankAccountRepository bankAccountRepository;
 
     @Override
     public RecurringPattern createRecurringPattern(RecurringPattern recurringPattern) {

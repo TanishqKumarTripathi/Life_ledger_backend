@@ -4,11 +4,13 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.concurrent.Flow.Subscriber;
 
 import com.Life_ledger.Enum.TransactionEnum;
 
 @Entity
-@Table(name = "transactions")
+// @Table(name = "transactions")
+@Table(name = "transactions", uniqueConstraints = @UniqueConstraint(columnNames = { "reference", "bank_account_id" }))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,7 +24,7 @@ public class Transaction {
 
     private String merchant;
 
-    @Column(unique = true)
+    // @Column(unique = true)
     private String reference;
 
     private BigDecimal amount;
@@ -49,6 +51,10 @@ public class Transaction {
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @ManyToOne
+    @JoinColumn(name = "sub_category_id")
+    private SubCategory subCategory;
 
     @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL)
     private UserCorrection correction;

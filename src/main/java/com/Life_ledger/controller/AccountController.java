@@ -25,7 +25,7 @@ import java.util.List;
 public class AccountController {
 
         private final AccountService accountService;
-        private final JwtUtil jwtUtils;
+        private final JwtUtil jwtUtil;
         private final UserRepository userRepository;
         private final BankAccountRepository bankAccountRepository;
         private final EncryptionUtil encryptionUtil;
@@ -37,7 +37,7 @@ public class AccountController {
 
                 token = token.substring(7);
 
-                String email = jwtUtils.extractUsername(token);
+                String email = jwtUtil.extractUsername(token);
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new RuntimeException("Invalid user"));
 
@@ -53,7 +53,7 @@ public class AccountController {
 
                 token = token.substring(7);
 
-                String email = jwtUtils.extractUsername(token);
+                String email = jwtUtil.extractUsername(token);
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new RuntimeException("Invalid user"));
 
@@ -67,7 +67,7 @@ public class AccountController {
                         @PathVariable Long accountId) {
 
                 token = token.substring(7);
-                String email = jwtUtils.extractUsername(token);
+                String email = jwtUtil.extractUsername(token);
 
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new RuntimeException("Invalid user"));
@@ -88,12 +88,12 @@ public class AccountController {
                         @PathVariable Long accountId) {
 
                 token = token.substring(7);
-                Long userId = jwtUtils.extractUserId(token, userRepository);
+                Long userId = jwtUtil.extractUserId(token, userRepository);
 
-                BankAccount account = bankAccountRepository.findById(accountId)
+                bankAccountRepository.findById(accountId)
                                 .orElseThrow(() -> new RuntimeException("Account not found"));
 
-                String msg = accountService.deleteAccount(userId, account);
+                String msg = accountService.deleteAccount(userId, accountId);
 
                 return ResponseEntity.ok(msg);
         }
@@ -105,13 +105,12 @@ public class AccountController {
                         @RequestBody AccountRequest request) {
 
                 token = token.substring(7);
-                Long userId = jwtUtils.extractUserId(token, userRepository);
+                Long userId = jwtUtil.extractUserId(token, userRepository);
 
-                request.setUserId(accountId); // set id inside request
+                request.setUserId(userId);
 
-                BankAccount updated = accountService.updateAccount(userId, request);
+                BankAccount updated = accountService.updateAccount(userId, accountId, request);
 
-                return ResponseEntity.ok(AccountMapper.fromEntity(updated));
+                return ResponseEntity.ok(AccountMapper.toResponse(updated));
         }
-
 }
