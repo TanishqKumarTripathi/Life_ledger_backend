@@ -16,8 +16,9 @@ public class TransactionMapper {
                 .notes(txn.getNotes())
                 .recurring(txn.isRecurring())
                 .anomaly(txn.isAnomaly())
-                .bankAccountId(txn.getBankAccount() != null ? txn.getBankAccount().getId() : null)
-                .categoryId(txn.getCategory() != null ? txn.getCategory().getId() : null)
+                .bankAccountLast4(txn.getBankAccount() != null ? txn.getBankAccount().getLast4Digits() : null)
+                .categoryName(txn.getCategory() != null ? txn.getCategory().getName() : null)
+                .subCategoryName(txn.getSubCategory() != null ? txn.getSubCategory().getName() : null)
                 .build();
     }
 }

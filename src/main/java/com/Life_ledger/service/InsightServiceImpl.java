@@ -1,5 +1,6 @@
 package com.Life_ledger.service;
 
+import com.Life_ledger.dto.insight.InsightResponseDTO;
 import com.Life_ledger.entity.Insight;
 import com.Life_ledger.repository.InsightRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,21 +26,46 @@ public class InsightServiceImpl implements InsightService {
     }
 
     @Override
-    public List<Insight> getAllInsights() {
-        return insightRepository.findAll();
+    public List<Insight> getInsightsByUserId(Long userId) {
+        return insightRepository.findByUser_Id(userId);
     }
 
     @Override
-    public Insight updateInsight(Long id, Insight insight) {
-        Insight existingInsight = getInsight(id);
-        existingInsight.setAiText(insight.getAiText());
-        existingInsight.setUser(insight.getUser());
-        existingInsight.setRelatedTransactions(insight.getRelatedTransactions());
-        return insightRepository.save(existingInsight);
+    public Insight updateInsight(Long id, String aiText) {
+        Insight existing = getInsight(id);
+        existing.setAiText(aiText);
+        return insightRepository.save(existing);
     }
 
     @Override
     public void deleteInsight(Long id) {
         insightRepository.deleteById(id);
     }
+
+    @Override
+    public InsightResponseDTO getInsightDTO(Long id) {
+        Insight insight = getInsight(id);
+
+        InsightResponseDTO dto = new InsightResponseDTO();
+        dto.setId(insight.getId());
+        dto.setAiText(insight.getAiText());
+        dto.setCreatedAt(insight.getCreatedAt());
+
+        return dto;
+    }
+
+    @Override
+    public List<InsightResponseDTO> getInsightsByUserIdDTO(Long userId) {
+        return insightRepository.findByUserId(userId)
+                .stream()
+                .map(insight -> {
+                    InsightResponseDTO dto = new InsightResponseDTO();
+                    dto.setId(insight.getId());
+                    dto.setAiText(insight.getAiText());
+                    dto.setCreatedAt(insight.getCreatedAt());
+                    return dto;
+                })
+                .toList();
+    }
+
 }

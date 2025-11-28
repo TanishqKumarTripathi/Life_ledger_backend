@@ -152,10 +152,11 @@ public class UserServiceImpl implements UserService {
                 .collect(Collectors.toList());
 
         // TransactionMapper transactionMapper = new TransactionMapper();
-        List<TransactionResponse> transactions = transactionRepository.findAllByBankAccount_User_Id(userId)
-                .stream()
-                .map(transactionMapper::toResponse)
-                .collect(Collectors.toList());
+        // List<TransactionResponse> transactions =
+        // transactionRepository.findAllByBankAccount_User_Id(userId)
+        // .stream()
+        // .map(transactionMapper::toResponse)
+        // .collect(Collectors.toList());
 
         List<GoalResponse> goals = goalRepository.findByUser(user)
                 .stream()
@@ -168,7 +169,7 @@ public class UserServiceImpl implements UserService {
                 .email(user.getEmail())
                 .accounts(accounts)
                 .categories(categories)
-                .transactions(transactions)
+                // .transactions(transactions)
                 .goals(goals)
                 .build();
     }

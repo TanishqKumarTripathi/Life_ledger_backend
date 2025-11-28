@@ -2,12 +2,16 @@ package com.Life_ledger.controller;
 
 import com.Life_ledger.dto.goals.GoalRequest;
 import com.Life_ledger.dto.goals.GoalResponse;
+import com.Life_ledger.entity.User;
+import com.Life_ledger.repository.UserRepository;
+import com.Life_ledger.security.JwtUtil;
 import com.Life_ledger.service.GoalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -17,49 +21,81 @@ import java.util.Optional;
 public class GoalController {
 
     private final GoalService goalService;
+    private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     @PostMapping
-    public ResponseEntity<GoalResponse> createGoal(@RequestBody GoalRequest request) {
+    public ResponseEntity<GoalResponse> createGoal(
+            @RequestHeader("Authorization") String token,
+            @RequestBody GoalRequest request) {
+        Long userId = getUserIdFromToken(token);
+        request.setUserId(userId);
         return ResponseEntity.ok(goalService.createGoal(request));
     }
 
     @GetMapping("/{goalId}")
-    public ResponseEntity<GoalResponse> getGoal(@PathVariable Long goalId) {
-        return ResponseEntity.ok(goalService.getGoalById(goalId));
+    public ResponseEntity<GoalResponse> getGoal(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long goalId) {
+        Long userId = getUserIdFromToken(token);
+        return ResponseEntity.ok(goalService.getGoalByIdAndUser(goalId, userId));
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getUserGoals(@PathVariable Long userId) {
+    @GetMapping
+    public ResponseEntity<List<GoalResponse>> getUserGoals(
+            @RequestHeader("Authorization") String token) {
+        Long userId = getUserIdFromToken(token);
         return ResponseEntity.ok(goalService.getGoalsByUser(userId));
     }
 
     @PutMapping("/{goalId}")
     public ResponseEntity<GoalResponse> updateGoal(
+            @RequestHeader("Authorization") String token,
             @PathVariable Long goalId,
-            @RequestBody GoalRequest request
-    ) {
+            @RequestBody GoalRequest request) {
+        Long userId = getUserIdFromToken(token);
+        request.setUserId(userId);
         return ResponseEntity.ok(goalService.updateGoal(goalId, request));
     }
 
     @DeleteMapping("/{goalId}")
-    public ResponseEntity<?> deleteGoal(@PathVariable Long goalId) {
-        goalService.deleteGoal(goalId);
-        return ResponseEntity.ok(Map.of("message", "Goal deleted"));
+    public ResponseEntity<Map<String, String>> deleteGoal(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long goalId) {
+        Long userId = getUserIdFromToken(token);
+        goalService.deleteGoal(goalId, userId);
+        return ResponseEntity.ok(Map.of("message", "Goal deleted successfully"));
     }
 
     @PostMapping("/{goalId}/contribute")
-    public ResponseEntity<?> contribute(
+    public ResponseEntity<Map<String, Object>> contribute(
+            @RequestHeader("Authorization") String token,
             @PathVariable Long goalId,
-            @RequestBody Map<String, Object> body
-    ) {
+            @RequestBody Map<String, Object> body) {
+        Long userId = getUserIdFromToken(token);
         BigDecimal amount = new BigDecimal(body.get("amount").toString());
-        Optional<String> nudge = goalService.addContribution(goalId, amount);
-        return ResponseEntity.ok(Map.of("message", "Contribution added", "nudge", nudge.orElse(null)));
+        Optional<String> nudge = goalService.addContribution(goalId, amount, userId);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Contribution added successfully",
+                "amount", amount,
+                "nudge", nudge.orElse(null)));
     }
 
     @GetMapping("/{goalId}/nudge")
-    public ResponseEntity<?> evaluateNudge(@PathVariable Long goalId) {
-        Optional<String> nudge = goalService.evaluateNudge(goalId);
-        return ResponseEntity.ok(Map.of("nudge", nudge.orElse(null)));
+    public ResponseEntity<Map<String, Object>> evaluateNudge(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long goalId) {
+        Long userId = getUserIdFromToken(token);
+        Optional<String> nudge = goalService.evaluateNudge(goalId, userId);
+        return ResponseEntity.ok(Map.of("nudge", nudge.orElse("Keep going! You're making progress.")));
+    }
+
+    private Long getUserIdFromToken(String token) {
+        token = token.substring(7);
+        String email = jwtUtil.extractUsername(token);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Invalid user"));
+        return user.getId();
     }
 }

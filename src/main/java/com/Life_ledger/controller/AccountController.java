@@ -23,7 +23,6 @@ import java.util.List;
 @RequestMapping("/api/accounts")
 @RequiredArgsConstructor
 public class AccountController {
-
         private final AccountService accountService;
         private final JwtUtil jwtUtil;
         private final UserRepository userRepository;

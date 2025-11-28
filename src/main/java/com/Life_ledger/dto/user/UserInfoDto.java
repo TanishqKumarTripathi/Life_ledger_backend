@@ -18,6 +18,6 @@ public class UserInfoDto {
     private String email;
     private List<AccountResponse> accounts;
     private List<CategoryResponse> categories;
-    private List<TransactionResponse> transactions;
+    // private List<TransactionResponse> transactions;
     private List<GoalResponse> goals;
 }

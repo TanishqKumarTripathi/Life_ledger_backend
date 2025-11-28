@@ -25,6 +25,8 @@ public class Insight {
     @JoinColumn(name = "insight_id")
     private List<Transaction> relatedTransactions;
 
+    @Lob
+    @Column(columnDefinition = "TEXT")
     private String aiText;
     private LocalDateTime createdAt;
 

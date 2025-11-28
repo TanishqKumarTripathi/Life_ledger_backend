@@ -17,6 +17,8 @@ public class BankAccount {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String accountName;
+
     private Long accountNumber;
 
     private String bankName;
@@ -32,6 +34,5 @@ public class BankAccount {
 
     @OneToMany(mappedBy = "bankAccount", cascade = CascadeType.ALL)
     private List<Transaction> transactions;
-
 
 }

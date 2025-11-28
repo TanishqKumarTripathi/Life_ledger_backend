@@ -8,12 +8,11 @@ import java.time.LocalDate;
 
 @Data
 public class GoalRequest {
-    private Long user_id;
+    private Long userId;
     private String name;
     private BigDecimal targetAmount;
-    private LocalDate startDate;
     private LocalDate deadline;
-    private GoalType type;
+    private String type;
     private String category;
-
+    private Double nudgeThreshold;
 }

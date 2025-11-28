@@ -11,14 +11,14 @@ import java.time.Instant;
 @Entity
 @Table(name = "file_imports")
 public class FileImport {
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
-        private String fileId;
-        private String filename;
-        private String filetype;
-        private Instant uploadAt;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String fileId;
+    private String filename;
+    private String filetype;
+    private Instant uploadAt;
 
-        @ManyToOne
-        private User user;
-    }
+    @ManyToOne
+    private User user;
+}

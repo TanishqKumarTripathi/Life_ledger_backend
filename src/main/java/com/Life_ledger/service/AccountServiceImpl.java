@@ -29,13 +29,17 @@ public class AccountServiceImpl implements AccountService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        String encryptedNumber = encryptionUtil.encrypt(request.getAccountNumber());
+        
+        // Check for duplicate account
+        if (bankAccountRepository.findFirstByEncryptedAccountNumberAndUserId(encryptedNumber, userId).isPresent()) {
+            throw new RuntimeException("Account already exists for this user");
+        }
+
         BankAccount account = AccountMapper.toEntity(request);
         account.setUser(user);
-
-        // encrypt account number
-        String encryptedNumber = encryptionUtil.encrypt(request.getAccountNumber());
+        account.setAccountName(request.getAccountName());
         account.setEncryptedAccountNumber(encryptedNumber);
-
         account.setLast4Digits(request.getAccountNumber()
                 .substring(request.getAccountNumber().length() - 4));
 

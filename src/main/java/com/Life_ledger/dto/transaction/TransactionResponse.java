@@ -16,6 +16,7 @@ public class TransactionResponse {
     private String notes;
     private boolean recurring;
     private boolean anomaly;
-    private Long bankAccountId;
-    private Long categoryId;
+    private String bankAccountLast4;
+    private String categoryName;
+    private String subCategoryName;
 }

@@ -48,6 +48,7 @@ public class AIController {
 
         // Call AI service
         Object result = geminiService.analyzeUserTransactions(userId);
+        
 
         return ResponseEntity.ok(result);
     }
