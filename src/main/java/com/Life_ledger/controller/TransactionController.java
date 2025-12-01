@@ -6,11 +6,13 @@ import com.Life_ledger.entity.User;
 import com.Life_ledger.service.TransactionService;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
+
 import java.time.LocalDate;
 import java.math.BigDecimal;
 import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -20,7 +22,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.Life_ledger.repository.TransactionRepository;
+
 
 
 @RestController
@@ -79,10 +81,10 @@ public class TransactionController {
             }
 
     @GetMapping("/count")
-    public ResponseEntity <Map<String,Object>> getTransactionCount(@RequestHeader("Authorization") String token){
-        User user =getUserFromToken(token);
-        BigDecimal TransactionCount = transactionService.getTransactionCount(user.getId());
-        return TransactionRepository.getTrasantionCount(user.getId());
+    public ResponseEntity<Map<String,Object>> getTransactionCount(@RequestHeader("Authorization") String token){
+        User user = getUserFromToken(token);
+        BigDecimal transactionCount = transactionService.getTransactionCount(user.getId());
+        return ResponseEntity.ok(Map.of("transactionCount", transactionCount));
     }
     
 
