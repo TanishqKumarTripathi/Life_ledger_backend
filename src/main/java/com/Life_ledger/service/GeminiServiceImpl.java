@@ -14,8 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -26,116 +27,307 @@ public class GeminiServiceImpl implements GeminiService {
     private final RuleRepository ruleRepository;
     private final GoalRepository goalRepository;
     private final InsightRepository insightRepository;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CategoryRepository categoryRepository;
+    private final SubCategoryRepository subCategoryRepository;
+    private final RecurringPatternRepository recurringPatternRepository;
 
     @Value("${gemini.api.key}")
     private String apiKey;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
-    // ============================================================================
-    // MAIN FUNCTION
-    // ============================================================================
+    // ========================================================================================
+    // MAIN ENTRY
+    // ========================================================================================
     @Override
     public Object analyzeUserTransactions(Long userId) {
+        Map<String, Object> resp = new HashMap<>();
         try {
-            // 1️⃣ Load user transactions
+            // 1) Load transactions
             List<Transaction> txns = transactionRepository.findAllByUserId(userId);
-            if (txns.isEmpty()) {
-                return Map.of("status", "error", "message", "No transactions found");
+            if (txns == null || txns.isEmpty()) {
+                resp.put("status", "error");
+                resp.put("message", "No transactions found");
+                return resp;
             }
 
-            // FLEXIBLE MAP BUILDER — corrects type mismatch
+            // Convert transactions to clean JSON-friendly maps
             List<Map<String, Object>> cleanTxns = new ArrayList<>();
             for (Transaction t : txns) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("id", t.getId());
-                map.put("date", t.getDate().toString());
-                map.put("amount", t.getAmount().doubleValue());
-                map.put("merchant", t.getMerchant());
-                map.put("description", t.getNotes());
-                cleanTxns.add(map);
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", t.getId());
+                m.put("date", t.getDate() != null ? t.getDate().toString() : null);
+                m.put("amount", t.getAmount() != null ? t.getAmount().doubleValue() : 0.0);
+                m.put("merchant", t.getMerchant() != null ? t.getMerchant() : "");
+                m.put("description", t.getNotes() != null ? t.getNotes() : "");
+                cleanTxns.add(m);
             }
 
-            // 2️⃣ Load rules
-            List<Rule> rules = ruleRepository.findByUser_IdOrderByPriorityAsc(userId);
+            // 2) Load rules (if any)
             List<Map<String, Object>> cleanRules = new ArrayList<>();
-            for (Rule r : rules) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("keyword", r.getKeyword());
-                map.put("regex", r.getRegex());
-                map.put("minAmount", r.getMinAmount());
-                map.put("maxAmount", r.getMaxAmount());
-                map.put("priority", r.getPriority());
-                map.put("category", r.getCategory() != null ? r.getCategory().getName() : null);
-                map.put("subCategory", r.getSubCategory() != null ? r.getSubCategory().getName() : null);
-                cleanRules.add(map);
-            }
-
-            // 3️⃣ Load goals
-            List<Goal> goals = goalRepository.findByUser_Id(userId);
-            List<Map<String, Object>> cleanGoals = new ArrayList<>();
-            for (Goal g : goals) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("name", g.getName());
-                map.put("category", g.getCategory());
-                map.put("targetAmount", g.getTargetAmount());
-                map.put("currentAmount", g.getCurrentAmount());
-                map.put("deadline", g.getDeadline() != null ? g.getDeadline().toString() : null);
-                map.put("type", g.getType().toString());
-                map.put("status", g.getStatus().toString());
-                cleanGoals.add(map);
-            }
-
-            // 4️⃣ Your ORIGINAL prompt — untouched
-            String prompt = buildAnalysisPrompt(cleanTxns, cleanRules, cleanGoals);
-
-            // 5️⃣ Call Gemini API
-            String jsonResponse = callGemini(prompt);
-            JsonNode parsed = objectMapper.readTree(jsonResponse);
-
-            // 6️⃣ Save summary insight only (we don’t modify categories unless you want)
-            saveInsight(userId, parsed);
-
-            return Map.of(
-                    "status", "success",
-                    "userId", userId,
-                    "analysis", parsed);
-
-        } catch (Exception e) {
-            return Map.of("status", "error", "message", e.getMessage());
-        }
-    }
-
-    // ============================================================================
-    // SAVE INSIGHT (AI Summary)
-    // ============================================================================
-    @Transactional
-    public void saveInsight(Long userId, JsonNode result) {
-        try {
-            if (result.has("summary")) {
-                String summary = result.get("summary").path("text").asText("");
-
-                if (!summary.isBlank()) {
-                    Insight insight = new Insight();
-                    insight.setAiText(summary);
-                    insight.setUser(User.builder().id(userId).build());
-                    insightRepository.save(insight);
+            List<Rule> rules = ruleRepository.findByUser_IdOrderByPriorityAsc(userId);
+            if (rules != null) {
+                for (Rule r : rules) {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("keyword", r.getKeyword());
+                    m.put("regex", r.getRegex());
+                    m.put("minAmount", r.getMinAmount());
+                    m.put("maxAmount", r.getMaxAmount());
+                    m.put("priority", r.getPriority());
+                    m.put("category", r.getCategory() != null ? r.getCategory().getName() : null);
+                    m.put("subCategory", r.getSubCategory() != null ? r.getSubCategory().getName() : null);
+                    cleanRules.add(m);
                 }
             }
-        } catch (Exception ignored) {
+
+            // 3) Load goals (if any)
+            List<Map<String, Object>> cleanGoals = new ArrayList<>();
+            List<Goal> goals = goalRepository.findByUser_Id(userId);
+            if (goals != null) {
+                for (Goal g : goals) {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("name", g.getName());
+                    m.put("category", g.getCategory());
+                    m.put("targetAmount", g.getTargetAmount());
+                    m.put("currentAmount", g.getCurrentAmount());
+                    m.put("deadline", g.getDeadline() != null ? g.getDeadline().toString() : null);
+                    m.put("type", g.getType() != null ? g.getType().toString() : null);
+                    m.put("status", g.getStatus() != null ? g.getStatus().toString() : null);
+                    cleanGoals.add(m);
+                }
+            }
+
+            // 4) Build prompt (unchanged)
+            String prompt = buildAnalysisPrompt(cleanTxns, cleanRules, cleanGoals);
+
+            // 5) Call Gemini
+            String jsonResponse = callGemini(prompt);
+            if (jsonResponse == null || jsonResponse.isBlank()) {
+                resp.put("status", "error");
+                resp.put("message", "Empty response from Gemini");
+                return resp;
+            }
+
+            JsonNode parsed;
+            try {
+                parsed = objectMapper.readTree(jsonResponse);
+            } catch (Exception parseEx) {
+                // If model returned text that's not pure JSON, include raw string in response
+                resp.put("status", "error");
+                resp.put("message", "Unable to parse Gemini JSON: " + parseEx.getMessage());
+                resp.put("raw", jsonResponse);
+                return resp;
+            }
+
+            // 6) Persist AI results to DB (categories, subcategories, recurring, anomalies,
+            // insight)
+            saveAIResults(userId, parsed);
+
+            // 7) Return final response
+            resp.put("status", "success");
+            resp.put("userId", userId);
+            resp.put("analysis", parsed);
+            return resp;
+        } catch (Exception e) {
+            System.err.println("❌ Gemini Analysis Failed: " + e.getMessage());
+            resp.put("status", "error");
+            resp.put("message", e.getMessage());
+            return resp;
         }
     }
 
-    // ============================================================================
-    // CALL GEMINI
-    // ============================================================================
-    private String callGemini(String prompt) throws Exception {
+    // ========================================================================================
+    // SAVE AI RESULTS (atomic-ish: transactional)
+    // ========================================================================================
+    @Transactional
+    public void saveAIResults(Long userId, JsonNode result) {
+        // Keep processing best-effort: errors on one section shouldn't abort the whole
+        // method
+        try {
+            // -------------------------
+            // 1) CATEGORIES / SUBCATEGORIES / ASSIGN TO TRANSACTION
+            // -------------------------
+            if (result.has("categorized") && result.get("categorized").isArray()) {
+                for (JsonNode item : result.get("categorized")) {
+                    try {
+                        long txnId = item.path("id").asLong(0L);
+                        if (txnId == 0L) {
+                            System.out.println("⚠️ categorized item missing id, skipping: " + item.toString());
+                            continue;
+                        }
 
-        Map<String, Object> part = Map.of("text", prompt);
-        Map<String, Object> content = Map.of("parts", List.of(part));
-        Map<String, Object> body = Map.of("contents", List.of(content));
+                        String categoryName = item.path("category").asText(null);
+                        String subCategoryName = item.path("subCategory").asText(null);
+
+                        Transaction txn = transactionRepository.findById(txnId).orElse(null);
+                        if (txn == null) {
+                            System.out
+                                    .println("⚠️ transaction not found for id " + txnId + ", skipping category assign");
+                            continue;
+                        }
+
+                        Category category = null;
+                        if (categoryName != null && !categoryName.isBlank()) {
+                            Optional<Category> catOpt = categoryRepository.findByUser_IdAndNameIgnoreCase(userId,
+                                    categoryName);
+                            if (catOpt.isPresent()) {
+                                category = catOpt.get();
+                            } else {
+                                // create category
+                                category = new Category();
+                                category.setName(categoryName);
+                                category.setUser(User.builder().id(userId).build());
+                                category = categoryRepository.save(category);
+                                System.out.println(
+                                        "✅ Created category '" + categoryName + "' (id=" + category.getId() + ")");
+                            }
+                        }
+
+                        SubCategory subCategory = null;
+                        if (subCategoryName != null && !subCategoryName.isBlank() && category != null) {
+                            Optional<SubCategory> scOpt = subCategoryRepository
+                                    .findByCategory_IdAndNameIgnoreCase(category.getId(), subCategoryName);
+                            if (scOpt.isPresent()) {
+                                subCategory = scOpt.get();
+                            } else {
+                                subCategory = new SubCategory();
+                                subCategory.setName(subCategoryName);
+                                subCategory.setCategory(category);
+                                subCategory = subCategoryRepository.save(subCategory);
+                                System.out.println("✅ Created subcategory '" + subCategoryName + "' (id="
+                                        + subCategory.getId() + ")");
+                            }
+                        }
+
+                        // assign to txn (if category/subCategory exist)
+                        if (category != null) {
+                            txn.setCategory(category);
+                        }
+                        if (subCategory != null) {
+                            txn.setSubCategory(subCategory);
+                        }
+                        if (category != null || subCategory != null) {
+                            transactionRepository.save(txn);
+                            System.out.println("📌 Updated transaction " + txnId + " with category/subcategory");
+                        } else {
+                            System.out.println(
+                                    "ℹ️ No category/subcategory provided for txn " + txnId + ", skipping update");
+                        }
+                    } catch (Exception e) {
+                        System.err.println("❌ Error processing categorized item: " + e.getMessage());
+                        // continue with next item
+                    }
+                }
+            } else {
+                System.out.println("ℹ️ No 'categorized' array in AI response or it's not an array");
+            }
+
+            // -------------------------
+            // 2) RECURRING PATTERNS
+            // -------------------------
+            if (result.has("recurring") && result.get("recurring").isArray()) {
+                for (JsonNode item : result.get("recurring")) {
+                    try {
+                        String merchant = item.path("merchant").asText("");
+                        double totalAmount = item.path("totalAmount").asDouble(0.0);
+                        String frequency = item.path("frequency").asText("");
+                        String nextDueDateStr = item.path("nextDueDate").asText(null);
+
+                        RecurringPattern rp = new RecurringPattern();
+                        rp.setMerchant(merchant);
+                        rp.setAmount(BigDecimal.valueOf(totalAmount));
+                        rp.setFrequency(frequency != null ? frequency : "");
+                        if (nextDueDateStr != null && !nextDueDateStr.isBlank()) {
+                            try {
+                                rp.setNextDueDate(LocalDate.parse(nextDueDateStr));
+                            } catch (Exception pe) {
+                                // ignore parse problem
+                                System.err.println("⚠️ Could not parse nextDueDate: " + nextDueDateStr);
+                            }
+                        }
+                        // bankAccount not set here (requires context), leave null
+                        recurringPatternRepository.save(rp);
+                        System.out.println("🔄 Saved recurring pattern for merchant: " + merchant);
+                    } catch (Exception e) {
+                        System.err.println("❌ Error saving recurring pattern: " + e.getMessage());
+                    }
+                }
+            } else {
+                System.out.println("ℹ️ No 'recurring' array or it's not an array");
+            }
+
+            // -------------------------
+            // 3) ANOMALIES
+            // -------------------------
+            if (result.has("anomalies") && result.get("anomalies").isArray()) {
+                for (JsonNode item : result.get("anomalies")) {
+                    try {
+                        long txnId = item.path("id").asLong(0L);
+                        if (txnId == 0L)
+                            continue;
+
+                        Transaction txn = transactionRepository.findById(txnId).orElse(null);
+                        if (txn == null) {
+                            System.out.println("⚠️ anomaly - transaction not found for id " + txnId);
+                            continue;
+                        }
+
+                        txn.setAnomaly(true);
+                        transactionRepository.save(txn);
+                        System.out.println("⚠️ Marked transaction " + txnId + " as anomaly" + txn.getMerchant());
+                    } catch (Exception e) {
+                        System.err.println("❌ Error processing anomaly item: " + e.getMessage());
+                    }
+                }
+            } else {
+                System.out.println("ℹ️ No 'anomalies' array in AI response");
+            }
+
+            // -------------------------
+            // 4) INSIGHT (summary)
+            // -------------------------
+            if (result.has("summary")) {
+                try {
+                    String summaryText = result.path("summary").path("text").asText("");
+                    if (summaryText != null && !summaryText.isBlank()) {
+                        Insight insight = new Insight();
+                        insight.setAiText(summaryText);
+                        // set user reference by id only (avoid fetching)
+                        insight.setUser(User.builder().id(userId).build());
+                        insightRepository.save(insight);
+                        System.out.println("💡 Insight saved for user " + userId);
+                    } else {
+                        System.out.println("ℹ️ 'summary.text' empty, nothing to save as insight");
+                    }
+                } catch (Exception e) {
+                    System.err.println("❌ Error saving insight: " + e.getMessage());
+                }
+            } else {
+                System.out.println("ℹ️ No 'summary' found in AI response");
+            }
+
+        } catch (Exception e) {
+            // top-level catch inside transactional method
+            System.err.println("❌ Failed saving AI results: " + e.getMessage());
+            // don't rethrow to avoid breaking caller; you may choose to rethrow if you want
+            // transaction to rollback fully
+        }
+    }
+
+    // ========================================================================================
+    // CALL GEMINI (safe parsing)
+    // ========================================================================================
+    private String callGemini(String prompt) throws Exception {
+        // Build request body as plain HashMap -> RestTemplate will convert to JSON
+        Map<String, Object> part = new HashMap<>();
+        part.put("text", prompt);
+
+        Map<String, Object> content = new HashMap<>();
+        content.put("parts", List.of(part));
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("contents", List.of(content));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -147,28 +339,44 @@ public class GeminiServiceImpl implements GeminiService {
                 new HttpEntity<>(body, headers),
                 String.class);
 
+        if (response == null || response.getBody() == null) {
+            throw new RuntimeException("Empty HTTP response from Gemini");
+        }
+
         JsonNode root = objectMapper.readTree(response.getBody());
 
-        String text = root
-                .path("candidates")
-                .get(0)
-                .path("content")
-                .path("parts")
-                .get(0)
-                .path("text")
-                .asText()
-                .trim();
+        // Guard: ensure candidates array exists and has element 0
+        JsonNode candidates = root.path("candidates");
+        if (!candidates.isArray() || candidates.size() == 0) {
+            // try to return raw body if structure is unexpected
+            throw new RuntimeException("Unexpected Gemini response shape (no candidates). Raw: " + response.getBody());
+        }
 
-        // strip ```json
-        if (text.startsWith("```"))
-            text = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
+        JsonNode first = candidates.get(0);
+        JsonNode contentNode = first.path("content");
+        JsonNode parts = contentNode.path("parts");
+        if (!parts.isArray() || parts.size() == 0) {
+            throw new RuntimeException("Unexpected Gemini response shape (no parts). Raw: " + response.getBody());
+        }
 
+        String text = parts.get(0).path("text").asText("").trim();
+        if (text.startsWith("```")) {
+            // try to extract JSON inside backticks
+            int start = text.indexOf("{");
+            int end = text.lastIndexOf("}");
+            if (start >= 0 && end > start) {
+                text = text.substring(start, end + 1);
+            } else {
+                // fallback: strip the backticks
+                text = text.replaceAll("^```+|```+$", "");
+            }
+        }
         return text;
     }
 
-    // ============================================================================
-    // YOUR EXACT PROMPT — UNCHANGED
-    // ============================================================================
+    // ========================================================================================
+    // ORIGINAL PROMPT (unchanged)
+    // ========================================================================================
     private String buildAnalysisPrompt(
             List<Map<String, Object>> txns,
             List<Map<String, Object>> rules,
@@ -178,7 +386,6 @@ public class GeminiServiceImpl implements GeminiService {
         String ruleJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(rules);
         String goalJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(goals);
 
-        // 🚨 THIS IS EXACTLY YOUR ORIGINAL PROMPT — NOT MODIFIED 🚨
         return """
                 You are LifeLedger AI — a smart financial assistant.Note all the transection are in Rupeess
 

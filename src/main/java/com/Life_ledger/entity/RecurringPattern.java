@@ -23,6 +23,8 @@ public class RecurringPattern {
 
     private String frequency; // Monthly, Weekly, Yearly
 
+    private String reason;
+
     private LocalDate nextDueDate;
 
     @ManyToOne
