@@ -1,8 +1,8 @@
 package com.Life_ledger.dto.goals;
 
 import com.Life_ledger.entity.Goal;
-import com.Life_ledger.enums.GoalStatus;
-import com.Life_ledger.enums.GoalType;
+import com.Life_ledger.Enum.GoalStatus;
+import com.Life_ledger.Enum.GoalType;
 import lombok.Builder;
 import lombok.Data;
 

@@ -2,7 +2,8 @@ package com.Life_ledger.service;
 
 import com.Life_ledger.dto.transaction.*;
 import com.Life_ledger.dto.usercorrection.*;
-
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 public interface TransactionService {
@@ -24,4 +25,6 @@ public interface TransactionService {
     List<TransactionResponse> getRecurringTransactions(Long userId);
 
     List<TransactionResponse> getAnomalyTransactions(Long userId);
+    BigDecimal getTotalSpent(Long userId, LocalDate startDate, LocalDate endDate);
+    BigDecimal getTransactionCount(Long userId);
 }

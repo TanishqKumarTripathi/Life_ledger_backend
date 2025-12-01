@@ -12,6 +12,7 @@ import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.repository.CategoryRepository;
 import com.Life_ledger.repository.SubCategoryRepository;
 import com.Life_ledger.security.JwtUtil;
+import com.Life_ledger.service.EnhancedPDFProcessor;
 import com.Life_ledger.service.FileExtractorService;
 import com.Life_ledger.service.HdfcStatementParser;
 import com.Life_ledger.service.PDFReaderService;
@@ -19,6 +20,7 @@ import com.Life_ledger.service.RuleService;
 import com.Life_ledger.util.EncryptionUtil;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,10 +32,12 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/pdf")
 @RequiredArgsConstructor
+@Slf4j
 public class PdfToJsonController {
 
     private final PDFReaderService pdfReaderService;
     private final HdfcStatementParser hdfcStatementParser;
+    private final EnhancedPDFProcessor enhancedPDFProcessor;
     private final FileExtractorService fileExtractorService;
     private final BankAccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
@@ -52,6 +56,9 @@ public class PdfToJsonController {
             @RequestParam(value = "password", required = false) String password) {
 
         try {
+            log.info("Processing PDF upload: filename={}, size={}, accountNumber={}", 
+                file.getOriginalFilename(), file.getSize(), accountNumber);
+                
             if (file == null || file.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "No file provided"));
             }
@@ -61,18 +68,31 @@ public class PdfToJsonController {
             }
 
             User user = getUserFromToken(token);
-            String rawText = pdfReaderService.extractText(file, password != null ? password.trim() : null);
             
-            if (rawText == null || rawText.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "Could not extract text from file"));
-            }
-
+            // Use enhanced PDF processor for better extraction
+            Map<String, Object> pdfData;
             boolean isCsv = file.getOriginalFilename() != null && file.getOriginalFilename().toLowerCase().endsWith(".csv");
-            Map<String, Object> pdfData = hdfcStatementParser.parse(rawText, isCsv);
+            
+            if (isCsv) {
+                // For CSV files, use the original text extraction method
+                String rawText = pdfReaderService.extractText(file, password != null ? password.trim() : null);
+                if (rawText == null || rawText.trim().isEmpty()) {
+                    return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "Could not extract text from CSV file"));
+                }
+                pdfData = hdfcStatementParser.parse(rawText, true);
+            } else {
+                // For PDF files, use enhanced processor
+                pdfData = enhancedPDFProcessor.processPDF(file, password != null ? password.trim() : null);
+            }
             
             if (pdfData == null) {
+                log.error("PDF parsing returned null result for file: {}", file.getOriginalFilename());
                 return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "Failed to parse file"));
             }
+            
+            log.info("PDF parsing completed. Bank: {}, Account: {}, Transactions found: {}", 
+                pdfData.get("bank"), pdfData.get("accountNumber"), 
+                pdfData.get("transactions") != null ? ((java.util.List<?>) pdfData.get("transactions")).size() : 0);
 
             String pdfAccountNumber = (String) pdfData.get("accountNumber");
             if (pdfAccountNumber != null && !"UNKNOWN".equals(pdfAccountNumber)) {
@@ -119,6 +139,7 @@ public class PdfToJsonController {
                     "skippedTransactions", saveResult.get("skippedTransactions")));
 
         } catch (Exception e) {
+            log.error("Error processing PDF: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of(
                 "status", "error", 
                 "message", "Processing failed: " + e.getMessage()

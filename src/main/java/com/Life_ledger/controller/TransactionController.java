@@ -6,12 +6,22 @@ import com.Life_ledger.entity.User;
 import com.Life_ledger.service.TransactionService;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
+import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.List;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.Life_ledger.repository.TransactionRepository;
+
 
 @RestController
 @RequestMapping("/api/transactions")
@@ -57,6 +67,26 @@ public class TransactionController {
         return ResponseEntity.ok(transactionService.getAllTransactions(user.getId(), bankAccountId, categoryId));
     }
 
+    @GetMapping("/total-spent")
+    public ResponseEntity <Map<String,Object>> getTotalSpent(@RequestHeader("Authorization") String token,
+            @RequestParam(required =false)@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam (required =false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        User user = getUserFromToken(token);
+        BigDecimal totalSpent = transactionService.getTotalSpent(user.getId(), startDate, endDate);
+        return ResponseEntity.ok(Map.of("totalSpent", totalSpent,
+                                        "startDate", startDate,
+                                        "endDate", endDate));
+            }
+
+    @GetMapping("/count")
+    public ResponseEntity <Map<String,Object>> getTransactionCount(@RequestHeader("Authorization") String token){
+        User user =getUserFromToken(token);
+        BigDecimal TransactionCount = transactionService.getTransactionCount(user.getId());
+        return TransactionRepository.getTrasantionCount(user.getId());
+    }
+    
+
+    
     @PutMapping("/{id}")
     public ResponseEntity<TransactionResponse> updateTransaction(
             @RequestHeader("Authorization") String token,

@@ -1,5 +1,6 @@
 package com.Life_ledger.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -9,8 +10,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
+@RequiredArgsConstructor
 public class HdfcStatementParser {
 
+    private final UniversalTransactionExtractor universalExtractor;
+    
     private static final Pattern HDFC_PATTERN = Pattern.compile(
             "(\\d{2}/\\d{2}/\\d{2,4})" + // 1. Transaction Date
                     "\\s+(.+?)\\s+" + // 2. Narration (multi-line merged)
@@ -36,6 +40,7 @@ public class HdfcStatementParser {
             if (isCsv) {
                 txns = parseCsv(rawTextOrCsv);
             } else {
+                // Try HDFC-specific parsing first
                 List<String> mergedLines = mergeLines(rawTextOrCsv);
                 for (String line : mergedLines) {
                     if (line != null && !line.trim().isEmpty()) {
@@ -46,6 +51,24 @@ public class HdfcStatementParser {
                     }
                 }
                 txns = detectTypes(txns);
+                
+                // If HDFC parsing didn't find many transactions, try universal extractor
+                if (txns.size() < 3) {
+                    Map<String, Object> universalResult = universalExtractor.extractTransactions(rawTextOrCsv);
+                    List<Map<String, Object>> universalTxns = (List<Map<String, Object>>) universalResult.get("transactions");
+                    if (universalTxns != null && universalTxns.size() > txns.size()) {
+                        txns = universalTxns;
+                        // Update bank and account info from universal extractor if better
+                        String universalBank = (String) universalResult.get("bank");
+                        String universalAccount = (String) universalResult.get("accountNumber");
+                        if (!"UNKNOWN".equals(universalBank)) {
+                            result.put("bank", universalBank);
+                        }
+                        if (!"UNKNOWN".equals(universalAccount)) {
+                            result.put("accountNumber", universalAccount);
+                        }
+                    }
+                }
             }
 
             String accountNumber = extractAccountNumber(rawTextOrCsv);
@@ -54,8 +77,14 @@ public class HdfcStatementParser {
             result.put("transactions", txns);
             
         } catch (Exception e) {
-            // Return safe default on any error
-            result.put("transactions", new ArrayList<>());
+            // Fallback to universal extractor on any error
+            try {
+                Map<String, Object> fallbackResult = universalExtractor.extractTransactions(rawTextOrCsv);
+                result.putAll(fallbackResult);
+            } catch (Exception fallbackError) {
+                // Return safe default on complete failure
+                result.put("transactions", new ArrayList<>());
+            }
         }
 
         return result;

@@ -1,5 +1,7 @@
 package com.Life_ledger.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import com.Life_ledger.dto.transaction.*;
 import com.Life_ledger.dto.usercorrection.UserCorrectionRequest;
 import com.Life_ledger.dto.usercorrection.UserCorrectionResponse;
@@ -9,6 +11,7 @@ import com.Life_ledger.repository.*;
 import com.Life_ledger.service.TransactionService;
 
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -64,9 +67,9 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public List<TransactionResponse> getAllTransactions(Long userId, Long bankAccountId, Long categoryId) {
         return transactionRepository.findAll().stream()
-               // .filter(t -> t.getBankAccount()!=null && t.getBankAccount().getUser()!=null && t.getBankAccount().getUser().getId().equals(userId))
+                .filter(t -> t.getBankAccount()!=null && t.getBankAccount().getUser()!=null && t.getBankAccount().getUser().getId().equals(userId))
                 .filter(t -> bankAccountId == null || t.getBankAccount().getId().equals(bankAccountId))
-                .filter(t -> categoryId == null || t.getCategory().getId().equals(categoryId))
+                .filter(t -> categoryId == null || (t.getCategory() != null && t.getCategory().getId().equals(categoryId)))
                 .map(transactionMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -160,5 +163,14 @@ public class TransactionServiceImpl implements TransactionService {
                 .filter(Transaction::isAnomaly)
                 .map(transactionMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public BigDecimal getTotalSpent(Long userId, LocalDate startDate, LocalDate endDate) {
+        return transactionRepository.getTotalSpentByUser(userId,startDate,endDate);}
+    
+    @Override
+    public BigDecimal getTransactionCount(Long userId) {
+        return transactionRepository.getTotalSpentByUser(userId);
     }
 }
