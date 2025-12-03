@@ -19,4 +19,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     Optional<Transaction> findByReferenceAndBankAccountId(String reference, Long bankAccountId);
 
+    boolean existsByFingerprintAndBankAccountId(String fingerprint, Long bankAccountId);
+
 }
