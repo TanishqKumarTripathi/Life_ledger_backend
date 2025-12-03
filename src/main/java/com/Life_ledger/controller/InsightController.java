@@ -23,9 +23,6 @@ public class InsightController {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
 
-    // -------------------------------------------------------------------
-    // Helper: Extract user from JWT safely
-    // -------------------------------------------------------------------
     private User getUserFromToken(String header) {
         if (header == null || !header.startsWith("Bearer ")) {
             throw new RuntimeException("Missing or malformed Authorization header");
@@ -43,9 +40,6 @@ public class InsightController {
         }
     }
 
-    // -------------------------------------------------------------------
-    // CREATE INSIGHT
-    // -------------------------------------------------------------------
     @PostMapping
     public ResponseEntity<?> create(
             @RequestHeader("Authorization") String token,
@@ -74,9 +68,6 @@ public class InsightController {
         }
     }
 
-    // -------------------------------------------------------------------
-    // GET ONE INSIGHT
-    // -------------------------------------------------------------------
     @GetMapping("/{id}")
     public ResponseEntity<?> getOne(
             @RequestHeader("Authorization") String token,

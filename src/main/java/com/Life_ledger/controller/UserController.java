@@ -23,9 +23,6 @@ public class UserController {
     private final UserService userInfoService;
     private final UserService userService;
 
-    // -------------------------
-    // 🔒 Extract & Validate User from JWT
-    // -------------------------
     private User getUserFromToken(String token) {
         try {
             token = token.substring(7);
@@ -38,10 +35,6 @@ public class UserController {
         }
     }
 
-    // ----------------------------------------------------------
-    // 1️⃣ FULL USER INFO (ACCOUNTS + TRANSACTIONS + GOALS + CATEGORIES)
-    // GET /api/user/info
-    // ----------------------------------------------------------
     @GetMapping("/info")
     public ResponseEntity<?> getFullInfo(
             @RequestHeader("Authorization") String token) {
@@ -54,10 +47,6 @@ public class UserController {
         }
     }
 
-    // ----------------------------------------------------------
-    // 2️⃣ USER PROFILE DATA (Name, Email, Phone, Pic)
-    // GET /api/user/profile
-    // ----------------------------------------------------------
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String token) {
         try {
@@ -71,10 +60,6 @@ public class UserController {
         }
     }
 
-    // ----------------------------------------------------------
-    // 3️⃣ UPDATE USER PROFILE
-    // PUT /api/user/update
-    // ----------------------------------------------------------
     @PutMapping("/update")
     public ResponseEntity<?> updateProfile(
             @RequestHeader("Authorization") String token,
@@ -91,10 +76,6 @@ public class UserController {
         }
     }
 
-    // ----------------------------------------------------------
-    // 4️⃣ UPLOAD / UPDATE PROFILE PIC
-    // POST /api/user/profile-pic
-    // ----------------------------------------------------------
     @PostMapping("/profile-pic")
     public ResponseEntity<?> uploadProfilePic(
             @RequestHeader("Authorization") String token,
@@ -111,9 +92,6 @@ public class UserController {
         }
     }
 
-    // -------------------------
-    // Simple JSON error response
-    // -------------------------
     record ErrorResponse(String status, String message) {
     }
 

@@ -30,7 +30,7 @@ public class AccountServiceImpl implements AccountService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         String encryptedNumber = encryptionUtil.encrypt(request.getAccountNumber());
-        
+
         // Check for duplicate account
         if (bankAccountRepository.findFirstByEncryptedAccountNumberAndUserId(encryptedNumber, userId).isPresent()) {
             throw new RuntimeException("Account already exists for this user");

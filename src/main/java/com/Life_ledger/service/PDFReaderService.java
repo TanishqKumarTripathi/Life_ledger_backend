@@ -10,25 +10,18 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class PDFReaderService {
 
-    public String extractText(MultipartFile file) {
-        return extractText(file, null);
-    }
+    public String extractText(MultipartFile file) throws Exception {
+        try (PDDocument document = PDDocument.load(file.getInputStream())) {
 
-    public String extractText(MultipartFile file, String password) {
-        try {
-            PDDocument document = (password == null || password.isEmpty()) ? PDDocument.load(file.getInputStream())
-                    : PDDocument.load(file.getInputStream(), password);
-
-            try (document) {
-                PDFTextStripper stripper = new PDFTextStripper();
-                stripper.setSortByPosition(true);
-                return stripper.getText(document);
+            if (document.isEncrypted()) {
+                throw new IllegalArgumentException("PDF is password protected");
             }
 
+            PDFTextStripper stripper = new PDFTextStripper();
+            return stripper.getText(document);
+
         } catch (InvalidPasswordException e) {
-            throw new IllegalArgumentException("PDF is password-protected.");
-        } catch (IOException e) {
-            throw new RuntimeException("Unable to read PDF", e);
+            throw new IllegalArgumentException("PDF is password protected");
         }
     }
 }
