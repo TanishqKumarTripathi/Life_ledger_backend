@@ -23,6 +23,7 @@ public class Rule {
     private Double minAmount;
     private Double maxAmount;
 
+    @Builder.Default
     private Integer priority = 100; // lower = higher priority
 
     @ManyToOne

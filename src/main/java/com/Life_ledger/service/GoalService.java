@@ -2,6 +2,7 @@ package com.Life_ledger.service;
 
 import com.Life_ledger.dto.goals.GoalRequest;
 import com.Life_ledger.dto.goals.GoalResponse;
+import com.Life_ledger.entity.User;
 
 import java.math.BigDecimal;
 import java.util.List;

@@ -4,7 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 
 public enum GoalType {
     SAVING,
-    BUDGET;
+    BUDGET,
+    SPENDING_CAP;
 
     @JsonCreator
     public static GoalType fromString(String value) {
@@ -14,6 +15,10 @@ public enum GoalType {
             return SAVING;
         if (value.equals("SAVING"))
             return SAVING;
+        if (value.equals("BUDGET"))
+            return BUDGET;
+        if (value.equals("SPENDING CAP") || value.equals("SPENDING_CAP"))
+            return SPENDING_CAP;
 
         return GoalType.valueOf(value);
     }

@@ -27,4 +27,7 @@ public interface TransactionService {
     List<TransactionResponse> getAnomalyTransactions(Long userId);
     BigDecimal getTotalSpent(Long userId, LocalDate startDate, LocalDate endDate);
     BigDecimal getTransactionCount(Long userId);
+
+    List<TransactionResponse> getRecentTransactions(Long userId);
+
 }

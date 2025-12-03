@@ -149,9 +149,8 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public List<TransactionResponse> getRecurringTransactions(Long userId) {
-        return transactionRepository.findAll().stream()
-                .filter(t -> t.getBankAccount().getUser().getId().equals(userId))
-                .filter(Transaction::isRecurring)
+        return transactionRepository.findAll().stream().filter(t -> t.getBankAccount().getUser().getId().equals(userId)).
+        filter(Transaction::isRecurring)
                 .map(transactionMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -167,10 +166,18 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public BigDecimal getTotalSpent(Long userId, LocalDate startDate, LocalDate endDate) {
-        return transactionRepository.getTotalSpentByUser(userId,startDate,endDate);}
+        return transactionRepository.getTotalSpentByUser(userId);
+    }
     
     @Override
     public BigDecimal getTransactionCount(Long userId) {
-        return transactionRepository.getTotalSpentByUser(userId);
+        return transactionRepository.getTransactionCount(userId);
+    }
+    
+    @Override
+    public List<TransactionResponse> getRecentTransactions(Long userId) {
+        return transactionRepository.findRecentTransactionsByUserId(userId).stream()
+                .map(transactionMapper::toResponse)
+                .collect(Collectors.toList());
     }
 }

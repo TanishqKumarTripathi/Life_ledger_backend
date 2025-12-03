@@ -1,13 +1,14 @@
 package com.Life_ledger.controller;
 
-import com.Life_ledger.dto.transaction.*;
-import com.Life_ledger.dto.usercorrection.*;
+import com.Life_ledger.dto.transaction.TransactionRequest;
+import com.Life_ledger.dto.transaction.TransactionResponse;
+import com.Life_ledger.dto.usercorrection.UserCorrectionRequest;
+import com.Life_ledger.dto.usercorrection.UserCorrectionResponse;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.service.TransactionService;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
 
-import java.time.LocalDate;
 import java.math.BigDecimal;
 import java.util.Map;
 
@@ -15,12 +16,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.format.annotation.DateTimeFormat;
-
 import java.util.List;
-
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 
 
@@ -70,15 +66,11 @@ public class TransactionController {
     }
 
     @GetMapping("/total-spent")
-    public ResponseEntity <Map<String,Object>> getTotalSpent(@RequestHeader("Authorization") String token,
-            @RequestParam(required =false)@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam (required =false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+    public ResponseEntity<Map<String,Object>> getTotalSpent(@RequestHeader("Authorization") String token) {
         User user = getUserFromToken(token);
-        BigDecimal totalSpent = transactionService.getTotalSpent(user.getId(), startDate, endDate);
-        return ResponseEntity.ok(Map.of("totalSpent", totalSpent,
-                                        "startDate", startDate,
-                                        "endDate", endDate));
-            }
+        BigDecimal totalSpent = transactionService.getTotalSpent(user.getId(), null, null);
+        return ResponseEntity.ok(Map.of("totalSpent", totalSpent));
+    }
 
     @GetMapping("/count")
     public ResponseEntity<Map<String,Object>> getTransactionCount(@RequestHeader("Authorization") String token){
@@ -86,7 +78,12 @@ public class TransactionController {
         BigDecimal transactionCount = transactionService.getTransactionCount(user.getId());
         return ResponseEntity.ok(Map.of("transactionCount", transactionCount));
     }
-    
+    @GetMapping("/recent")
+    public ResponseEntity<List<TransactionResponse>> getRecentTransactions(@RequestHeader("Authorization") String token) {
+        User user = getUserFromToken(token);
+        List<TransactionResponse> recentTx = transactionService.getRecentTransactions(user.getId());
+        return ResponseEntity.ok(recentTx);
+    }
 
     
     @PutMapping("/{id}")

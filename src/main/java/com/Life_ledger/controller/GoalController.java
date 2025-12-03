@@ -33,14 +33,6 @@ public class GoalController {
         return ResponseEntity.ok(goalService.createGoal(request));
     }
 
-    @GetMapping("/{goalId}")
-    public ResponseEntity<GoalResponse> getGoal(
-            @RequestHeader("Authorization") String token,
-            @PathVariable Long goalId) {
-        Long userId = getUserIdFromToken(token);
-        return ResponseEntity.ok(goalService.getGoalByIdAndUser(goalId, userId));
-    }
-
     @GetMapping
     public ResponseEntity<List<GoalResponse>> getUserGoals(
             @RequestHeader("Authorization") String token) {

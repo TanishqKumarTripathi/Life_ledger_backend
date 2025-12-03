@@ -41,7 +41,8 @@ public class Goal {
     private GoalStatus status;
 
     private Double nudgeThreshold;
-    private LocalDateTime createdAt= LocalDateTime.now();
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 
 
     @ManyToOne
