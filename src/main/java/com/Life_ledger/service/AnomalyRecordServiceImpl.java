@@ -4,7 +4,6 @@ import com.Life_ledger.entity.AnomalyRecord;
 import com.Life_ledger.repository.AnomalyRecordRepository;
 
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,28 +25,24 @@ public class AnomalyRecordServiceImpl implements AnomalyRecordService {
                 .orElseThrow(() -> new RuntimeException("Anomaly not found with ID: " + id));
     }
 
+    // 🔥 FIXED — now fetch by bank account ID
     @Override
-    public List<AnomalyRecord> getAnomaliesByUser(Long userId) {
-        return anomalyRepo.findByUserId(userId);
-    }
-
-    // @Override
-    // public AnomalyRecord markResolved(Long id, boolean resolved, String comment)
-    // {
-    // AnomalyRecord anomaly = getAnomaly(id);
-    // anomaly.setResolved(resolved);
-    // anomaly.setUserComment(comment);
-    // return anomalyRepo.save(anomaly);
-    // }
-
-    @Override
-    public void deleteAnomaly(Long id) {
-        anomalyRepo.deleteById(id);
+    public List<AnomalyRecord> getAnomaliesByBankAccount(Long bankAccountId) {
+        return anomalyRepo.findByBankAccount_Id(bankAccountId);
     }
 
     @Override
     public AnomalyRecord markResolved(Long id, boolean resolved, String comment) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'markResolved'");
+        AnomalyRecord anomaly = getAnomaly(id);
+
+        anomaly.setAnomalyType(resolved ? "RESOLVED" : anomaly.getAnomalyType());
+        anomaly.setReason(comment != null ? comment : anomaly.getReason());
+
+        return anomalyRepo.save(anomaly);
+    }
+
+    @Override
+    public void deleteAnomaly(Long id) {
+        anomalyRepo.deleteById(id);
     }
 }

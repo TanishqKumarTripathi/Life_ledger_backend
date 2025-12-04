@@ -29,7 +29,8 @@ public class JwtUtil {
 
     public String generateToken(User user) {
         return Jwts.builder()
-                .setSubject(user.getEmail()) // use email as username
+                .setSubject(user.getEmail())
+                .claim("userId", user.getId()) // ✅ add userId into token
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -73,4 +74,10 @@ public class JwtUtil {
     public Long getUserIdFromToken(String token, User user) {
         return user.getId();
     }
+
+    public Long extractUserId(String token) {
+        Claims claims = extractAllClaims(token);
+        return claims.get("userId", Long.class);
+    }
+
 }

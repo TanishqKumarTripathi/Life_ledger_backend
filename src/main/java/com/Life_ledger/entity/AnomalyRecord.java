@@ -3,12 +3,6 @@ package com.Life_ledger.entity;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -37,8 +31,8 @@ public class AnomalyRecord {
     private String anomalyType;
 
     @ManyToOne
-
-    private User user;
+    @JoinColumn(name = "bank_account_id", nullable = false)
+    private BankAccount bankAccount;
 
     private LocalDateTime createdAt;
 }

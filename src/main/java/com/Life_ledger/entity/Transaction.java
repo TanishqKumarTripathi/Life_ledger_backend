@@ -10,7 +10,12 @@ import com.Life_ledger.Enum.TransactionEnum;
 
 @Entity
 // @Table(name = "transactions")
-@Table(name = "transactions", uniqueConstraints = @UniqueConstraint(columnNames = { "bank_account_id" }))
+// @Table(name = "transactions")
+@Table(
+    name = "transactions",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"fingerprint", "bank_account_id"})
+)
+
 @Getter
 @Setter
 @NoArgsConstructor
