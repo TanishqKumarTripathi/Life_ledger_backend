@@ -19,4 +19,10 @@ public interface InsightService {
     List<InsightResponseDTO> getInsightsByUserIdDTO(Long userId);
 
     InsightResponseDTO getInsightDTO(Long id);
+
+    Insight getLatestInsight(Long userId);
+    
+    // AI Analysis methods
+    Object getInsightSection(Long userId, String sectionName);
+    boolean hasRecentAnalysis(Long userId, int hours);
 }

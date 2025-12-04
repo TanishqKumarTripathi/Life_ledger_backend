@@ -1,6 +1,7 @@
 package com.Life_ledger.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,4 +12,7 @@ public interface InsightRepository extends JpaRepository<Insight, Long> {
 
     // Optional alternative naming
     List<Insight> findByUserId(Long userId);
+
+    Optional<Insight> findTopByUserIdOrderByCreatedAtDesc(Long userId);
+
 }

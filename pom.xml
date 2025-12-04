@@ -115,8 +115,16 @@
         <dependency>
             <groupId>net.sourceforge.tess4j</groupId>
             <artifactId>tess4j</artifactId>
-            <version>${tess4j.version}</version>
+            <version>5.4.0</version>
         </dependency>
+
+        <!-- open cv -->
+        <dependency>
+            <groupId>org.openpnp</groupId>
+            <artifactId>opencv</artifactId>
+            <version>4.9.0-0</version>
+        </dependency>
+
 
         <!-- Swagger -->
         <dependency>

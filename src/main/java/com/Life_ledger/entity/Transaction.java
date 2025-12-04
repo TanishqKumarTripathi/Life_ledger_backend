@@ -10,7 +10,7 @@ import com.Life_ledger.Enum.TransactionEnum;
 
 @Entity
 // @Table(name = "transactions")
-@Table(name = "transactions", uniqueConstraints = @UniqueConstraint(columnNames = { "reference", "bank_account_id" }))
+@Table(name = "transactions", uniqueConstraints = @UniqueConstraint(columnNames = { "bank_account_id" }))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -39,6 +39,9 @@ public class Transaction {
     private boolean recurring;
 
     private boolean anomaly;
+
+    @Column(name = "fingerprint", nullable = false, length = 500)
+    private String fingerprint;
 
     @ManyToOne
     @JoinColumn(name = "bank_account_id")

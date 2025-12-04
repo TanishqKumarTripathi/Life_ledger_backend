@@ -6,32 +6,31 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
+@Table(name = "insight")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Insight {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @OneToMany
-    @JoinColumn(name = "insight_id")
-    private List<Transaction> relatedTransactions;
-
     @Lob
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "ai_text", columnDefinition = "TEXT")
     private String aiText;
+
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now();
     }
 }

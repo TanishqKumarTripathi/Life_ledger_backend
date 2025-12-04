@@ -22,6 +22,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     Optional<Transaction> findByReferenceAndBankAccountId(String reference, Long bankAccountId);
 
+    boolean existsByFingerprintAndBankAccountId(String fingerprint, Long bankAccountId);
+
     @Query("""
     SELECT COALESCE(SUM(t.amount), 0)
     FROM Transaction t
@@ -37,10 +39,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.bankAccount.user.id = :userId AND t.typeTransaction = 'DEBIT'")
     BigDecimal getTotalSpentByUser(@Param("userId") Long userId);
-    
+
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.bankAccount.user.id = :userId")
     BigDecimal getTransactionCount(@Param("userId") Long userId);
-    
+
     @Query("SELECT t FROM Transaction t WHERE t.bankAccount.user.id = :userId ORDER BY t.date DESC LIMIT 5")
     List<Transaction> findRecentTransactionsByUserId(@Param("userId") Long userId);
 
@@ -50,6 +52,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     ORDER BY t.date DESC
     """)
     List<Transaction> findRecentTransactions(@Param("userId") Long userId, Pageable pageable);
-    
+
 
 }

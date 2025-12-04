@@ -188,4 +188,37 @@ public class InsightController {
                     "message", ex.getMessage()));
         }
     }
+
+    //latest
+    @GetMapping("/latest")
+    public ResponseEntity<?> getLatest(
+            @RequestHeader("Authorization") String token) {
+
+        try {
+            User user = getUserFromToken(token);
+
+            Insight insight = insightService.getLatestInsight(user.getId());
+
+            if (insight == null) {
+                return ResponseEntity.ok(Map.of(
+                        "status", "empty",
+                        "message", "No insights found. Please run analysis first."
+                ));
+            }
+
+            InsightResponseDTO dto = InsightResponseDTO.fromEntity(insight);
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "insight", dto
+            ));
+
+        } catch (Exception ex) {
+            return ResponseEntity.status(400).body(Map.of(
+                    "status", "error",
+                    "message", ex.getMessage()
+            ));
+        }
+    }
+
 }
