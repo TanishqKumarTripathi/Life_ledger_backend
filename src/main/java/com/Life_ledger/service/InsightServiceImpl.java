@@ -25,9 +25,10 @@ public class InsightServiceImpl implements InsightService {
                 .orElseThrow(() -> new RuntimeException("Insight not found with id: " + id));
     }
 
+    // 🚀 NEW — correct fetch method
     @Override
-    public List<Insight> getInsightsByUserId(Long userId) {
-        return insightRepository.findByUser_Id(userId);
+    public List<Insight> getInsightsByBankAccountId(Long accountId) {
+        return insightRepository.findByBankAccount_Id(accountId);
     }
 
     @Override
@@ -54,9 +55,10 @@ public class InsightServiceImpl implements InsightService {
         return dto;
     }
 
+    // 🚀 NEW — bank-account–based DTO fetch
     @Override
-    public List<InsightResponseDTO> getInsightsByUserIdDTO(Long userId) {
-        return insightRepository.findByUserId(userId)
+    public List<InsightResponseDTO> getInsightsByBankAccountIdDTO(Long accountId) {
+        return insightRepository.findByBankAccount_Id(accountId)
                 .stream()
                 .map(insight -> {
                     InsightResponseDTO dto = new InsightResponseDTO();
@@ -67,5 +69,4 @@ public class InsightServiceImpl implements InsightService {
                 })
                 .toList();
     }
-
 }

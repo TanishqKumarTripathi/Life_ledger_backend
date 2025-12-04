@@ -1,7 +1,6 @@
 package com.Life_ledger.service;
 
 import com.Life_ledger.entity.AnomalyRecord;
-
 import java.util.List;
 
 public interface AnomalyRecordService {
@@ -10,7 +9,8 @@ public interface AnomalyRecordService {
 
     AnomalyRecord getAnomaly(Long id);
 
-    List<AnomalyRecord> getAnomaliesByUser(Long userId);
+    // 🔥 REPLACED user-based method with account-based
+    List<AnomalyRecord> getAnomaliesByBankAccount(Long bankAccountId);
 
     AnomalyRecord markResolved(Long id, boolean resolved, String comment);
 

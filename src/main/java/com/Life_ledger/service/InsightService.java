@@ -6,17 +6,20 @@ import com.Life_ledger.entity.Insight;
 import java.util.List;
 
 public interface InsightService {
+
     Insight createInsight(Insight insight);
 
     Insight getInsight(Long id);
 
-    List<Insight> getInsightsByUserId(Long userId);
+    // 🚀 IMPORTANT — now bank-account–based
+    List<Insight> getInsightsByBankAccountId(Long accountId);
 
     Insight updateInsight(Long id, String aiText);
 
     void deleteInsight(Long id);
 
-    List<InsightResponseDTO> getInsightsByUserIdDTO(Long userId);
-
     InsightResponseDTO getInsightDTO(Long id);
+
+    // 🚀 DTO version — also bank-account–based
+    List<InsightResponseDTO> getInsightsByBankAccountIdDTO(Long accountId);
 }

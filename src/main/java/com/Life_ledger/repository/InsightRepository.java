@@ -1,14 +1,14 @@
 package com.Life_ledger.repository;
 
+import com.Life_ledger.entity.Insight;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
 import java.util.List;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import com.Life_ledger.entity.Insight;
-
+@Repository
 public interface InsightRepository extends JpaRepository<Insight, Long> {
-    List<Insight> findByUser_Id(Long userId);
 
-    // Optional alternative naming
-    List<Insight> findByUserId(Long userId);
+    // Fetch insights for a specific bank account
+    List<Insight> findByBankAccount_Id(Long bankAccountId);
 }

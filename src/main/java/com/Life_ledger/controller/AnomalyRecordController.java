@@ -1,18 +1,18 @@
 package com.Life_ledger.controller;
 
 import com.Life_ledger.entity.AnomalyRecord;
+import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.User;
+import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
 import com.Life_ledger.service.AnomalyRecordService;
 
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-import java.util.List;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/anomalies")
@@ -22,10 +22,11 @@ public class AnomalyRecordController {
     private final AnomalyRecordService anomalyService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final BankAccountRepository bankAccountRepository;
 
-    // -------------------------------
-    // Helper: Extract user from JWT
-    // -------------------------------
+    // --------------------------------------------------
+    // Helper: extract user from JWT
+    // --------------------------------------------------
     private User getUser(String tokenHeader) {
         try {
             String token = tokenHeader.substring(7);
@@ -39,73 +40,32 @@ public class AnomalyRecordController {
         }
     }
 
-    // -------------------------------
-    // CREATE anomaly record (AI saves)
-    // -------------------------------
-    @PostMapping
-    public ResponseEntity<?> create(
-            @RequestHeader("Authorization") String token,
-            @RequestBody AnomalyRecord anomalyRequest) {
+    // --------------------------------------------------
+    // Validate that account belongs to the logged-in user
+    // --------------------------------------------------
+    private BankAccount validateAccountOwner(Long accountId, Long userId) {
+        BankAccount acc = bankAccountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Bank account not found"));
 
-        try {
-            User user = getUser(token);
+        if (!acc.getUser().getId().equals(userId))
+            throw new RuntimeException("Access denied: Account does not belong to user");
 
-            anomalyRequest.setUser(user);
-
-            AnomalyRecord saved = anomalyService.saveAnomaly(anomalyRequest);
-
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "message", "Anomaly record saved",
-                    "anomaly", saved));
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", e.getMessage()));
-        }
+        return acc;
     }
 
-    // -------------------------------
-    // GET single anomaly (owner only)
-    // -------------------------------
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getOne(
+    // --------------------------------------------------
+    // GET ALL anomalies for a specific bank account
+    // --------------------------------------------------
+    @GetMapping("/account/{accountId}")
+    public ResponseEntity<?> getAllByAccount(
             @RequestHeader("Authorization") String token,
-            @PathVariable Long id) {
+            @PathVariable Long accountId) {
 
         try {
             User user = getUser(token);
-            AnomalyRecord anomaly = anomalyService.getAnomaly(id);
+            validateAccountOwner(accountId, user.getId());
 
-            if (!anomaly.getUser().getId().equals(user.getId())) {
-                return ResponseEntity.status(403).body(Map.of(
-                        "status", "error",
-                        "message", "Access denied"));
-            }
-
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "anomaly", anomaly));
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", e.getMessage()));
-        }
-    }
-
-    // -------------------------------
-    // GET all anomalies for logged-in user
-    // -------------------------------
-    @GetMapping
-    public ResponseEntity<?> getAll(
-            @RequestHeader("Authorization") String token) {
-
-        try {
-            User user = getUser(token);
-
-            List<AnomalyRecord> anomalies = anomalyService.getAnomaliesByUser(user.getId());
+            List<AnomalyRecord> anomalies = anomalyService.getAnomaliesByBankAccount(accountId);
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
@@ -119,9 +79,63 @@ public class AnomalyRecordController {
         }
     }
 
-    // -------------------------------
+    // --------------------------------------------------
+    // GET a single anomaly (account owner only)
+    // --------------------------------------------------
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getOne(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long id) {
+
+        try {
+            User user = getUser(token);
+            AnomalyRecord anomaly = anomalyService.getAnomaly(id);
+
+            if (!anomaly.getBankAccount().getUser().getId().equals(user.getId()))
+                return ResponseEntity.status(403).body(Map.of("status", "error", "message", "Access denied"));
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "anomaly", anomaly));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", e.getMessage()));
+        }
+    }
+
+    // --------------------------------------------------
+    // DELETE anomaly (only account owner)
+    // --------------------------------------------------
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> delete(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long id) {
+
+        try {
+            User user = getUser(token);
+            AnomalyRecord anomaly = anomalyService.getAnomaly(id);
+
+            if (!anomaly.getBankAccount().getUser().getId().equals(user.getId()))
+                return ResponseEntity.status(403).body(Map.of("status", "error", "message", "Access denied"));
+
+            anomalyService.deleteAnomaly(id);
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "message", "Anomaly deleted"));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", e.getMessage()));
+        }
+    }
+
+    // --------------------------------------------------
     // MARK anomaly resolved
-    // -------------------------------
+    // --------------------------------------------------
     @PutMapping("/{id}/resolve")
     public ResponseEntity<?> resolve(
             @RequestHeader("Authorization") String token,
@@ -132,11 +146,8 @@ public class AnomalyRecordController {
             User user = getUser(token);
             AnomalyRecord anomaly = anomalyService.getAnomaly(id);
 
-            if (!anomaly.getUser().getId().equals(user.getId())) {
-                return ResponseEntity.status(403).body(Map.of(
-                        "status", "error",
-                        "message", "Access denied"));
-            }
+            if (!anomaly.getBankAccount().getUser().getId().equals(user.getId()))
+                return ResponseEntity.status(403).body(Map.of("status", "error", "message", "Access denied"));
 
             boolean resolved = (boolean) body.getOrDefault("resolved", false);
             String comment = (String) body.getOrDefault("comment", "");
@@ -147,37 +158,6 @@ public class AnomalyRecordController {
                     "status", "success",
                     "message", "Anomaly updated",
                     "anomaly", updated));
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", e.getMessage()));
-        }
-    }
-
-    // -------------------------------
-    // DELETE anomaly
-    // -------------------------------
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(
-            @RequestHeader("Authorization") String token,
-            @PathVariable Long id) {
-
-        try {
-            User user = getUser(token);
-            AnomalyRecord anomaly = anomalyService.getAnomaly(id);
-
-            if (!anomaly.getUser().getId().equals(user.getId())) {
-                return ResponseEntity.status(403).body(Map.of(
-                        "status", "error",
-                        "message", "Access denied"));
-            }
-
-            anomalyService.deleteAnomaly(id);
-
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "message", "Anomaly deleted"));
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(

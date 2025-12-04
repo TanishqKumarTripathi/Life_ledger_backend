@@ -12,7 +12,7 @@ public class AIControllerTestEndpoint {
 
     private final OpenAIService openAIService;
 
-    @GetMapping("/test")
+    @GetMapping("/tests")
     public ResponseEntity<String> testOpenAI() {
         String reply = openAIService.testModel();
         return ResponseEntity.ok(reply);

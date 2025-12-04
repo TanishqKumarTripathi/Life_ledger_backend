@@ -9,10 +9,9 @@ import java.util.List;
 @Repository
 public interface AnomalyRecordRepository extends JpaRepository<AnomalyRecord, Long> {
 
-    // Fetch all anomalies for a specific user
-    List<AnomalyRecord> findByUserId(Long userId);
+    // Fetch anomalies for a specific bank account
+    List<AnomalyRecord> findByBankAccount_Id(Long bankAccountId);
 
-    // Fetch anomalies for a specific transaction (optional but useful)
-    List<AnomalyRecord> findByTransactionId(Long transactionId);
-
+    // Optional: fetch anomalies for a specific transaction
+    List<AnomalyRecord> findByTransaction_Id(Long transactionId);
 }

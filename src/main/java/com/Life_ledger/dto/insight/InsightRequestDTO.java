@@ -5,8 +5,8 @@ import lombok.Data;
 @Data
 public class InsightRequestDTO {
 
-    // The AI-generated text to store
     private String aiText;
 
-    // In the future you can add: relatedTransactionIds, category, tone, etc.
+    // 🔥 REQUIRED after converting Insight to bank-account-based
+    private Long bankAccountId;
 }
