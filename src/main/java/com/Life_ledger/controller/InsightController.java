@@ -2,10 +2,8 @@ package com.Life_ledger.controller;
 
 import com.Life_ledger.dto.insight.InsightRequestDTO;
 import com.Life_ledger.dto.insight.InsightResponseDTO;
-import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.Insight;
 import com.Life_ledger.entity.User;
-import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
 import com.Life_ledger.service.InsightService;
@@ -24,38 +22,24 @@ public class InsightController {
     private final InsightService insightService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
-    private final BankAccountRepository bankAccountRepository;
 
-    // ----------------------------------------------------
-    // Extract user from token
-    // ----------------------------------------------------
     private User getUserFromToken(String header) {
-        if (header == null || !header.startsWith("Bearer "))
+        if (header == null || !header.startsWith("Bearer ")) {
             throw new RuntimeException("Missing or malformed Authorization header");
+        }
 
-        String token = header.substring(7);
-        String email = jwtUtil.extractUsername(token);
+        try {
+            String token = header.substring(7);
+            String email = jwtUtil.extractUsername(token);
 
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            return userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Invalid or expired token");
+        }
     }
 
-    // ----------------------------------------------------
-    // Validate bank account ownership
-    // ----------------------------------------------------
-    private BankAccount validateAccountOwner(Long accountId, Long userId) {
-        BankAccount acc = bankAccountRepository.findById(accountId)
-                .orElseThrow(() -> new RuntimeException("Bank account not found"));
-
-        if (!acc.getUser().getId().equals(userId))
-            throw new RuntimeException("Access denied: account does not belong to user");
-
-        return acc;
-    }
-
-    // ----------------------------------------------------
-    // CREATE insight manually (rare)
-    // ----------------------------------------------------
     @PostMapping
     public ResponseEntity<?> create(
             @RequestHeader("Authorization") String token,
@@ -64,31 +48,26 @@ public class InsightController {
         try {
             User user = getUserFromToken(token);
 
-            // Validate account ownership
-            BankAccount account = validateAccountOwner(request.getBankAccountId(), user.getId());
-
-            Insight insight = Insight.builder()
-                    .aiText(request.getAiText())
-                    .bankAccount(account)
-                    .build();
+            Insight insight = new Insight();
+            insight.setAiText(request.getAiText());
+            insight.setUser(user);
 
             Insight saved = insightService.createInsight(insight);
+
+            InsightResponseDTO dto = InsightResponseDTO.fromEntity(saved);
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
                     "message", "Insight created successfully",
-                    "insight", InsightResponseDTO.fromEntity(saved)));
+                    "insight", dto));
 
         } catch (Exception ex) {
-            return ResponseEntity.badRequest().body(Map.of(
+            return ResponseEntity.status(400).body(Map.of(
                     "status", "error",
                     "message", ex.getMessage()));
         }
     }
 
-    // ----------------------------------------------------
-    // GET one insight (must belong to user)
-    // ----------------------------------------------------
     @GetMapping("/{id}")
     public ResponseEntity<?> getOne(
             @RequestHeader("Authorization") String token,
@@ -96,37 +75,40 @@ public class InsightController {
 
         try {
             User user = getUserFromToken(token);
+
             Insight insight = insightService.getInsight(id);
 
-            if (!insight.getBankAccount().getUser().getId().equals(user.getId()))
-                return ResponseEntity.status(403).body(Map.of("status", "error", "message", "Access denied"));
+            if (!insight.getUser().getId().equals(user.getId())) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "status", "error",
+                        "message", "Access denied"));
+            }
+
+            InsightResponseDTO dto = InsightResponseDTO.fromEntity(insight);
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
-                    "insight", InsightResponseDTO.fromEntity(insight)));
+                    "insight", dto));
 
         } catch (Exception ex) {
-            return ResponseEntity.badRequest().body(Map.of(
+            return ResponseEntity.status(400).body(Map.of(
                     "status", "error",
                     "message", ex.getMessage()));
         }
     }
 
-    // ----------------------------------------------------
-    // GET ALL INSIGHTS FOR A SPECIFIC BANK ACCOUNT
-    // ----------------------------------------------------
-    @GetMapping("/account/{accountId}")
-    public ResponseEntity<?> getAllByAccount(
-            @RequestHeader("Authorization") String token,
-            @PathVariable Long accountId) {
+    // -------------------------------------------------------------------
+    // GET ALL INSIGHTS for the logged in user
+    // -------------------------------------------------------------------
+    @GetMapping
+    public ResponseEntity<?> getAll(
+            @RequestHeader("Authorization") String token) {
 
         try {
             User user = getUserFromToken(token);
 
-            // Validate ownership
-            validateAccountOwner(accountId, user.getId());
-
-            List<InsightResponseDTO> insights = insightService.getInsightsByBankAccountIdDTO(accountId);
+            List<InsightResponseDTO> insights = insightService
+                    .getInsightsByUserIdDTO(user.getId());
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
@@ -134,15 +116,15 @@ public class InsightController {
                     "insights", insights));
 
         } catch (Exception ex) {
-            return ResponseEntity.badRequest().body(Map.of(
+            return ResponseEntity.status(400).body(Map.of(
                     "status", "error",
                     "message", ex.getMessage()));
         }
     }
 
-    // ----------------------------------------------------
-    // UPDATE insight
-    // ----------------------------------------------------
+    // -------------------------------------------------------------------
+    // UPDATE INSIGHT
+    // -------------------------------------------------------------------
     @PutMapping("/{id}")
     public ResponseEntity<?> update(
             @RequestHeader("Authorization") String token,
@@ -151,28 +133,33 @@ public class InsightController {
 
         try {
             User user = getUserFromToken(token);
+
             Insight existing = insightService.getInsight(id);
 
-            if (!existing.getBankAccount().getUser().getId().equals(user.getId()))
-                return ResponseEntity.status(403).body(Map.of("status", "error", "message", "Access denied"));
+            if (!existing.getUser().getId().equals(user.getId())) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "status", "error",
+                        "message", "Access denied"));
+            }
 
             Insight updated = insightService.updateInsight(id, request.getAiText());
+            InsightResponseDTO dto = InsightResponseDTO.fromEntity(updated);
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
                     "message", "Insight updated",
-                    "insight", InsightResponseDTO.fromEntity(updated)));
+                    "insight", dto));
 
         } catch (Exception ex) {
-            return ResponseEntity.badRequest().body(Map.of(
+            return ResponseEntity.status(400).body(Map.of(
                     "status", "error",
                     "message", ex.getMessage()));
         }
     }
 
-    // ----------------------------------------------------
-    // DELETE insight
-    // ----------------------------------------------------
+    // -------------------------------------------------------------------
+    // DELETE INSIGHT
+    // -------------------------------------------------------------------
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(
             @RequestHeader("Authorization") String token,
@@ -180,10 +167,14 @@ public class InsightController {
 
         try {
             User user = getUserFromToken(token);
+
             Insight existing = insightService.getInsight(id);
 
-            if (!existing.getBankAccount().getUser().getId().equals(user.getId()))
-                return ResponseEntity.status(403).body(Map.of("status", "error", "message", "Access denied"));
+            if (!existing.getUser().getId().equals(user.getId())) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "status", "error",
+                        "message", "Access denied"));
+            }
 
             insightService.deleteInsight(id);
 
@@ -192,7 +183,7 @@ public class InsightController {
                     "message", "Insight deleted"));
 
         } catch (Exception ex) {
-            return ResponseEntity.badRequest().body(Map.of(
+            return ResponseEntity.status(400).body(Map.of(
                     "status", "error",
                     "message", ex.getMessage()));
         }
