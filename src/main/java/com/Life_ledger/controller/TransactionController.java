@@ -8,10 +8,13 @@ import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+
 
 @RestController
 @RequestMapping("/api/transactions")
@@ -21,6 +24,8 @@ public class TransactionController {
     private final TransactionService transactionService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+
+    
 
     private User getUserFromToken(String token) {
         token = token.substring(7);

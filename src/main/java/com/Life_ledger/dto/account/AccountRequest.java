@@ -22,4 +22,47 @@ public class AccountRequest {
     private String accountNumber; // plaintext from user
 
     private Long userId;
+
+    public void setId(Long userId) {
+        this.userId = userId;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public Long getId() {
+        return userId;
+    }
+
+    public String getAccountName() {
+    return accountName;
+}
+
+public void setAccountName(String accountName) {
+    this.accountName = accountName;
+}
+
+public String getBankName() {
+    return bankName;
+}
+
+public void setBankName(String bankName) {
+    this.bankName = bankName;
+}
+
+public String getAccountNumber() {
+    return accountNumber;
+}
+
+public void setAccountNumber(String accountNumber) {
+    this.accountNumber = accountNumber;
+}
+
+
+
 }

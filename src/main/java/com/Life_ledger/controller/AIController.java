@@ -1,5 +1,8 @@
 package com.Life_ledger.controller;
 
+
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,8 +17,8 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
+// @Autowired
 public class AIController {
-
     private final GeminiService geminiService;
     private final JwtUtil jwtUtils;
     private final UserRepository userRepository;
@@ -45,7 +48,6 @@ public class AIController {
                 .orElseThrow(() -> new RuntimeException("Invalid user"));
 
         Long userId = user.getId();
-
         // Call AI service
         Object result = geminiService.analyzeUserTransactions(userId);
 

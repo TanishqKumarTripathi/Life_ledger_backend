@@ -19,6 +19,7 @@ import com.Life_ledger.service.RuleService;
 import com.Life_ledger.util.EncryptionUtil;
 
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +27,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
+
+
 
 @RestController
 @RequestMapping("/api/pdf")
@@ -45,6 +48,7 @@ public class PdfToJsonController {
     private final RuleService ruleService;
     private final JwtUtil jwtUtil;
     private final EncryptionUtil encryptionUtil;
+
 
     @PostMapping("/upload")
     public ResponseEntity<Map<String, Object>> uploadPdf(

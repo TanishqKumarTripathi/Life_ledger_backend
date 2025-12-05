@@ -2,11 +2,15 @@ package com.Life_ledger.controller;
 
 import com.Life_ledger.entity.Insight;
 import com.Life_ledger.service.InsightService;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+
 
 @RestController
 @RequestMapping("/insights")

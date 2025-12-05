@@ -14,16 +14,19 @@ import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/accounts")
 @RequiredArgsConstructor
 public class AccountController {
 
+        @Autowired
         private final AccountService accountService;
         private final JwtUtil jwtUtil;
         private final UserRepository userRepository;
@@ -72,11 +75,8 @@ public class AccountController {
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new RuntimeException("Invalid user"));
 
-                BankAccount account = bankAccountRepository.findById(accountId)
-                                .orElseThrow(() -> new RuntimeException("Not found"));
-
-                if (!account.getUser().getId().equals(user.getId()))
-                        throw new RuntimeException("Unauthorized");
+                BankAccount account = bankAccountRepository.findByIdAndUser(accountId, user)
+                                .orElseThrow(() -> new RuntimeException("Not found or unauthorized"));
 
                 String decrypted = encryptionUtil.decrypt(account.getEncryptedAccountNumber());
                 return ResponseEntity.ok(decrypted);
@@ -107,7 +107,7 @@ public class AccountController {
                 token = token.substring(7);
                 Long userId = jwtUtil.extractUserId(token, userRepository);
 
-                request.setUserId(userId);
+                request.setId(userId);
 
                 BankAccount updated = accountService.updateAccount(userId, accountId, request);
 

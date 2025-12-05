@@ -11,4 +11,6 @@ public class AccountResponse {
     private String accountName;
     private String bankName;
     private String last4Digits; // only last 4 digits shown
+
+
 }

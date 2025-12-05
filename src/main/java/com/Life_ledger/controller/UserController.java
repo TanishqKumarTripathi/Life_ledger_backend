@@ -1,6 +1,5 @@
 package com.Life_ledger.controller;
 
-// import com.Life_ledger.dto.UserInfoDto;
 import com.Life_ledger.dto.user.UserResponse;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.repository.UserRepository;
@@ -8,6 +7,7 @@ import com.Life_ledger.security.JwtUtil;
 import com.Life_ledger.service.UserService;
 
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +20,8 @@ public class UserController {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
-    private final UserService userInfoService;
+
+    // Only ONE userService needed — use it for everything
     private final UserService userService;
 
     // -------------------------
@@ -47,7 +48,7 @@ public class UserController {
             @RequestHeader("Authorization") String token) {
         try {
             User user = getUserFromToken(token);
-            return ResponseEntity.ok(userInfoService.getFullUserInfo(user.getId()));
+            return ResponseEntity.ok(userService.getFullUserInfo(user.getId()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ErrorResponse("Unauthorized", e.getMessage()));

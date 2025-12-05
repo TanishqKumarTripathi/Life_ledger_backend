@@ -1,6 +1,7 @@
 package com.Life_ledger.security;
 
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,10 +21,12 @@ import com.Life_ledger.service.CustomUserDetailsService;
 import java.util.Arrays;
 import java.util.Collections;
 
+
+
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
-
+    
     private final JwtFilter jwtFilter;
     private final CustomUserDetailsService customUserDetailsService;
 
