@@ -1,17 +1,16 @@
 package com.Life_ledger.service;
 
-import com.Life_ledger.dto.analytic.CategoryInsightDto;
-import com.Life_ledger.dto.analytic.DashboardStatsDto;
-import com.Life_ledger.dto.analytic.MonthlyInsightDto;
-
-import java.util.List;
+import com.Life_ledger.dto.analytic.DashboardResponseDTO;
 
 public interface AnalyticsService {
-    DashboardStatsDto getDashboardStats(Long userId);
+    // DashboardStatsDto getDashboardStats(Long userId);
 
-    List<CategoryInsightDto> getCategorySpending(Long userId, int days);
+    // List<CategoryInsightDto> getCategorySpending(Long userId, int days);
 
-    List<CategoryInsightDto> getCategorySpending(Long userId, int days, Long accountId);
+    // List<CategoryInsightDto> getCategorySpending(Long userId, int days, Long
+    // accountId);
 
-    List<MonthlyInsightDto> getMonthlySpending(Long userId, int months);
+    // List<MonthlyInsightDto> getMonthlySpending(Long userId, int months);
+
+    DashboardResponseDTO getDashboard(Long userId, Long accountId);
 }

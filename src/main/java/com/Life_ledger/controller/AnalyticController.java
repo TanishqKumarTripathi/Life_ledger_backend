@@ -1,8 +1,6 @@
 package com.Life_ledger.controller;
 
-import com.Life_ledger.dto.analytic.CategoryInsightDto;
-import com.Life_ledger.dto.analytic.MonthlyInsightDto;
-import com.Life_ledger.dto.analytic.DashboardStatsDto;
+import com.Life_ledger.dto.analytic.DashboardResponseDTO;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
@@ -11,10 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
-@RequestMapping("/api/insights")
+@RequestMapping("/api/analytics")
 @RequiredArgsConstructor
 public class AnalyticController {
 
@@ -22,42 +18,25 @@ public class AnalyticController {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
 
-    private User getUserFromToken(String token) {
-        if (token.startsWith("Bearer "))
-            token = token.substring(7);
-        String email = jwtUtil.extractUsername(token);
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Invalid user"));
-    }
-
-    // Dashboard stats
+    // ----------------------------
+    // DASHBOARD ENDPOINT
+    // ----------------------------
     @GetMapping("/dashboard")
-    public ResponseEntity<DashboardStatsDto> getDashboardStats(
-            @RequestHeader("Authorization") String token) {
-        User user = getUserFromToken(token);
-        return ResponseEntity.ok(analyticsService.getDashboardStats(user.getId()));
-    }
+    public ResponseEntity<DashboardResponseDTO> getDashboard(
+            @RequestParam Long accountId,
+            @RequestHeader("Authorization") String header) {
+        if (header == null || !header.startsWith("Bearer ")) {
+            throw new RuntimeException("Invalid token");
+        }
 
-    // Category spending
-    @GetMapping("/category")
-    public ResponseEntity<List<CategoryInsightDto>> getCategorySpending(
-            @RequestHeader("Authorization") String token,
-            @RequestParam(defaultValue = "30") int days,
-            @RequestParam(required = false) Long accountId) {
+        String token = header.substring(7);
+        String email = jwtUtil.extractUsername(token);
 
-        User user = getUserFromToken(token);
-        return ResponseEntity.ok(
-                analyticsService.getCategorySpending(user.getId(), days, accountId));
-    }
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-    // Monthly spending
-    @GetMapping("/monthly")
-    public ResponseEntity<List<MonthlyInsightDto>> getMonthlySpending(
-            @RequestHeader("Authorization") String token,
-            @RequestParam(defaultValue = "6") int months) {
+        DashboardResponseDTO dto = analyticsService.getDashboard(user.getId(), accountId);
 
-        User user = getUserFromToken(token);
-        return ResponseEntity.ok(
-                analyticsService.getMonthlySpending(user.getId(), months));
+        return ResponseEntity.ok(dto);
     }
 }

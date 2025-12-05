@@ -112,4 +112,24 @@ public class AccountController {
 
                 return ResponseEntity.ok(AccountMapper.toResponse(updated));
         }
+
+        @GetMapping("/last4")
+        public ResponseEntity<?> getLast4Digits(@RequestHeader("Authorization") String token) {
+
+                User user = getUser(token);
+
+                return ResponseEntity.ok(accountService.getUserBankAccounts(user.getId()));
+        }
+
+        private User getUser(String header) {
+                if (header == null || !header.startsWith("Bearer "))
+                        throw new RuntimeException("Invalid token");
+
+                String token = header.substring(7);
+                String email = jwtUtil.extractUsername(token);
+
+                return userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+        }
+
 }

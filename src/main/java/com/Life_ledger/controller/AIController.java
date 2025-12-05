@@ -2,7 +2,6 @@ package com.Life_ledger.controller;
 
 import com.Life_ledger.service.GeminiService;
 import com.Life_ledger.service.GeminiServiceImpl.Step;
-import com.Life_ledger.service.GeminiServiceImpl.TaskStatus;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;

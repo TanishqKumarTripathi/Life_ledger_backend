@@ -13,17 +13,14 @@ import java.util.regex.Pattern;
 @Service
 public class HdfcStatementParser {
 
-    // PDF-line matcher left as-is for PDF parsing
     private static final Pattern HDFC_PATTERN = Pattern.compile(
-            "(\\d{2}/\\d{2}/\\d{2,4})" + // date
-                    "\\s+(.+?)\\s+" + // narration
-                    "(\\d{8,16})\\s+" + // reference
-                    "(\\d{2}/\\d{2}/\\d{2,4})\\s+" + // value date
-                    "([\\d,]*\\d\\.\\d{2})\\s+" + // amount
-                    "([\\d,]*\\d\\.\\d{2})" // balance
-    );
+            "(\\d{2}/\\d{2}/\\d{2,4})" +
+                    "\\s+(.+?)\\s+" +
+                    "(\\d{8,16})\\s+" +
+                    "(\\d{2}/\\d{2}/\\d{2,4})\\s+" +
+                    "([\\d,]*\\d\\.\\d{2})\\s+" +
+                    "([\\d,]*\\d\\.\\d{2})");
 
-    // Entry point used by your service
     public Map<String, Object> parse(String rawTextOrCsv, boolean isCsv) {
         Map<String, Object> result = new HashMap<>();
         result.put("bank", "HDFC");
@@ -59,7 +56,6 @@ public class HdfcStatementParser {
         return result;
     }
 
-    // ---------------- CSV parsing (robust) ----------------
     private List<Map<String, Object>> parseCsv(String csv, List<String> errors) {
         List<Map<String, Object>> transactions = new ArrayList<>();
         if (csv == null || csv.trim().isEmpty())
@@ -86,7 +82,6 @@ public class HdfcStatementParser {
         List<String> headerCols = splitCsvLine(headerLine);
         Map<String, Integer> colIndex = detectColumns(headerCols);
 
-        // if detection failed, still try with default positions (common HDFC)
         if (colIndex.isEmpty()) {
             colIndex.put("date", 0);
             colIndex.put("description", 1);
@@ -97,14 +92,12 @@ public class HdfcStatementParser {
             colIndex.put("balance", 6);
         }
 
-        // iterate rows after header
         for (int i = headerIdx + 1; i < lines.length; i++) {
             String raw = lines[i];
             if (raw == null || raw.trim().isEmpty())
                 continue;
 
             List<String> cols = splitCsvLine(raw);
-            // pad if necessary
             while (cols.size() < Collections.max(colIndex.values()) + 1)
                 cols.add("");
 
@@ -117,12 +110,10 @@ public class HdfcStatementParser {
                 String deposit = safeGet(cols, colIndex.getOrDefault("deposit", 5));
                 String balance = safeGet(cols, colIndex.getOrDefault("balance", 6));
 
-                // clean strings
                 withdrawal = cleanField(withdrawal);
                 deposit = cleanField(deposit);
                 balance = cleanField(balance);
 
-                // compute amount & type
                 Double amount = 0.0;
                 String type = "DEBIT";
 
@@ -133,20 +124,15 @@ public class HdfcStatementParser {
                     amount = parseAmountFlexible(deposit);
                     type = "CREDIT";
                 } else {
-                    // sometimes amount is in single column or parentheses for negative
-                    // try to find the numeric-looking column in the row
                     amount = findAmountInRow(cols);
                     if (amount != null && amount != 0.0) {
-                        // we cannot be 100% sure credit/debit — default to DEBIT
                         type = "DEBIT";
                     } else {
-                        // nothing parseable — skip
                         errors.add("Row " + (i + 1) + " skipped: no amount found -> " + raw);
                         continue;
                     }
                 }
 
-                // parse dates robustly
                 String dateNormalized = normalizeCsvDateFlexible(rawDate);
                 String valueDateNormalized = normalizeCsvDateFlexible(rawValueDate);
 
@@ -171,7 +157,6 @@ public class HdfcStatementParser {
         return transactions;
     }
 
-    // ---------------- PDF parsing helper ----------------
     private List<Map<String, Object>> parsePdf(String raw, List<String> errors) {
         List<Map<String, Object>> txns = new ArrayList<>();
         if (raw == null || raw.isBlank())
@@ -189,9 +174,6 @@ public class HdfcStatementParser {
         return detectTypes(txns);
     }
 
-    // ---------------- Utility helpers ----------------
-
-    // Try to detect header column indices by common labels
     private Map<String, Integer> detectColumns(List<String> headerCols) {
         Map<String, Integer> map = new HashMap<>();
         for (int i = 0; i < headerCols.size(); i++) {
@@ -215,7 +197,6 @@ public class HdfcStatementParser {
         return map;
     }
 
-    // Split CSV line with quotes correctly
     private List<String> splitCsvLine(String line) {
         return splitCsvLineInternal(line);
     }
@@ -229,10 +210,9 @@ public class HdfcStatementParser {
         for (int idx = 0; idx < line.length(); idx++) {
             char c = line.charAt(idx);
             if (c == '"') {
-                // handle double quotes inside quotes
                 if (inQuotes && idx + 1 < line.length() && line.charAt(idx + 1) == '"') {
                     sb.append('"');
-                    idx++; // skip next quote
+                    idx++;
                 } else {
                     inQuotes = !inQuotes;
                 }
@@ -265,8 +245,6 @@ public class HdfcStatementParser {
         return out;
     }
 
-    // Flexible amount parser: removes commas, handles parentheses for negative
-    // amounts
     private Double parseAmountFlexible(String s) {
         if (s == null)
             return 0.0;
@@ -274,16 +252,13 @@ public class HdfcStatementParser {
         if (t.isEmpty())
             return 0.0;
 
-        // remove currency symbols and spaces
         t = t.replaceAll("[^0-9().-]", "");
 
-        // parentheses -> negative
         boolean negative = false;
         if (t.startsWith("(") && t.endsWith(")")) {
             negative = true;
             t = t.substring(1, t.length() - 1);
         }
-        // remove commas
         t = t.replace(",", "").trim();
         if (t.isEmpty())
             return 0.0;
@@ -292,7 +267,6 @@ public class HdfcStatementParser {
             double val = Double.parseDouble(t);
             return negative ? -Math.abs(val) : val;
         } catch (NumberFormatException ex) {
-            // fallback try to extract any number
             Matcher m = Pattern.compile("-?\\d+[\\d,]*\\.?\\d*").matcher(t);
             if (m.find()) {
                 String num = m.group().replace(",", "");
@@ -305,7 +279,6 @@ public class HdfcStatementParser {
         return 0.0;
     }
 
-    // If no explicit debit/credit, try find numeric-looking column in row
     private Double findAmountInRow(List<String> cols) {
         for (String c : cols) {
             Double v = tryParseNumeric(c);
@@ -328,13 +301,11 @@ public class HdfcStatementParser {
         }
     }
 
-    // Flexible date normalization
     private String normalizeCsvDateFlexible(String d) {
         if (d == null || d.isBlank())
             return LocalDate.now().toString();
         d = d.trim();
 
-        // Try common formats
         List<String> patterns = Arrays.asList(
                 "dd MMM yyyy", "d MMM yyyy",
                 "dd-MM-yyyy", "dd/MM/yyyy", "dd-MM-yy",
@@ -347,11 +318,9 @@ public class HdfcStatementParser {
             } catch (DateTimeParseException ignored) {
             }
         }
-        // fallback to earlier method that accepts dd/MM/yy etc.
         return normalizeDate(d);
     }
 
-    // The original normalizeDate (keeps behavior)
     private String normalizeDate(String d) {
         if (d == null || d.trim().isEmpty())
             return LocalDate.now().toString();
@@ -366,12 +335,11 @@ public class HdfcStatementParser {
                 }
             }
         } catch (Exception e) {
-            // Fall through to return input
+            return e.getMessage();
         }
         return d;
     }
 
-    // PDF helpers unchanged (kept for completeness)
     private List<String> mergeLines(String raw) {
         List<String> result = new ArrayList<>();
         if (raw == null)
@@ -452,7 +420,6 @@ public class HdfcStatementParser {
         return txns;
     }
 
-    // simple account extraction (unchanged)
     public String extractAccountNumber(String text) {
         if (text == null)
             return "UNKNOWN";

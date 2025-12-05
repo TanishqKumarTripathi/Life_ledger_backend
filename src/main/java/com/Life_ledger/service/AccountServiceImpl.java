@@ -2,6 +2,7 @@ package com.Life_ledger.service;
 
 import com.Life_ledger.dto.account.AccountRequest;
 import com.Life_ledger.dto.account.AccountResponse;
+import com.Life_ledger.dto.account.BankAccountSummaryDto;
 import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.mapper.AccountMapper;
@@ -92,4 +93,16 @@ public class AccountServiceImpl implements AccountService {
         bankAccountRepository.delete(existing);
         return "Account deleted";
     }
+
+    @Override
+    public List<BankAccountSummaryDto> getUserBankAccounts(Long userId) {
+        return bankAccountRepository.findByUserId(userId)
+                .stream()
+                .map(acc -> new BankAccountSummaryDto(
+                        acc.getId(),
+                        acc.getBankName(),
+                        acc.getLast4Digits()))
+                .collect(Collectors.toList());
+    }
+
 }
