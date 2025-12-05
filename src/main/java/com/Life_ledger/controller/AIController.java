@@ -8,6 +8,7 @@ import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
 import com.Life_ledger.service.GeminiService;
 import com.Life_ledger.service.InsightService;
+import com.Life_ledger.service.RecurringPatternService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -27,13 +28,13 @@ public class AIController {
     private final JwtUtil jwtUtils;
     private final UserRepository userRepository;
     private final InsightRepository insightRepository;
+    private final RecurringPatternService recurringPatternService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
 
-    // --------------------------------------------------------------------
+
     // TEST + MODEL LIST (unchanged)
-    // --------------------------------------------------------------------
     @GetMapping("/test-gemini")
     public ResponseEntity<String> testGemini() {
         return ResponseEntity.ok(geminiService.testModel());
@@ -45,9 +46,7 @@ public class AIController {
     }
 
 
-    // --------------------------------------------------------------------
-    // 1️⃣ RUN AI ANALYSIS → SAVE TO DB (Called when user opens AI Insights)
-    // --------------------------------------------------------------------
+    // RUN AI ANALYSIS → SAVE TO DB (Called when user opens AI Insights)
     @PostMapping("/analyze")
     @Transactional
     public ResponseEntity<?> analyze(
@@ -61,15 +60,7 @@ public class AIController {
 
             Long userId = user.getId();
 
-            // Check if recent analysis exists (within 24 hours)
-            if (insightService.hasRecentAnalysis(userId, 24)) {
-                return ResponseEntity.ok(Map.of(
-                        "status", "recent",
-                        "message", "Recent analysis found. Use /latest endpoint to fetch data."
-                ));
-            }
-
-            // Run Gemini AI analysis
+            // Always run Gemini AI analysis
             Object analysisResult = geminiService.analyzeUserTransactions(userId);
             String jsonText = objectMapper.writeValueAsString(analysisResult);
 
@@ -77,7 +68,10 @@ public class AIController {
             Insight insight = new Insight();
             insight.setAiText(jsonText);
             insight.setUser(user);
-            insightRepository.save(insight);
+            insight = insightRepository.save(insight);
+
+            // Extract and save recurring patterns
+            recurringPatternService.processInsightPatterns(insight);
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
@@ -94,9 +88,7 @@ public class AIController {
     }
 
 
-    // --------------------------------------------------------------------
-    // 2️⃣ GET LATEST SAVED INSIGHT FOR LOGGED-IN USER
-    // --------------------------------------------------------------------
+    //GET LATEST SAVED INSIGHT FOR LOGGED-IN USER
     @GetMapping("/latest")
     @Transactional(readOnly = true)
     public ResponseEntity<?> getLatestInsight(
@@ -138,9 +130,7 @@ public class AIController {
         }
     }
 
-    // --------------------------------------------------------------------
-    // 3️⃣ GET SPECIFIC INSIGHT SECTION (health, spending, patterns, anomalies)
-    // --------------------------------------------------------------------
+    //GET SPECIFIC INSIGHT SECTION (health, spending, patterns, anomalies)
     @GetMapping("/insights/sections/{sectionName}")
     @Transactional(readOnly = true)
     public ResponseEntity<?> getInsightSection(
@@ -175,10 +165,7 @@ public class AIController {
             ));
         }
     }
-
-    // --------------------------------------------------------------------
-    // 4️⃣ CHECK IF ANALYSIS EXISTS
-    // --------------------------------------------------------------------
+    // CHECK IF ANALYSIS EXISTS
     @GetMapping("/insights/status")
     @Transactional(readOnly = true)
     public ResponseEntity<?> getAnalysisStatus(

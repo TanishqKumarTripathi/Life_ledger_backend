@@ -53,5 +53,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     """)
     List<Transaction> findRecentTransactions(@Param("userId") Long userId, Pageable pageable);
 
-
+    @Query("""
+    SELECT t FROM Transaction t 
+    WHERE t.bankAccount.user.id = :userId 
+    AND LOWER(t.merchant) LIKE LOWER(CONCAT('%', :merchant, '%'))
+    AND ABS(t.amount - :amount) <= :tolerance
+    ORDER BY t.date DESC
+    """)
+    List<Transaction> findByMerchantAndAmountRange(@Param("userId") Long userId, 
+                                                  @Param("merchant") String merchant, 
+                                                  @Param("amount") BigDecimal amount, 
+                                                  @Param("tolerance") BigDecimal tolerance);
 }

@@ -24,9 +24,7 @@ public class AnomalyRecordController {
     private final UserRepository userRepository;
     private final BankAccountRepository bankAccountRepository;
 
-    // --------------------------------------------------
     // Helper: extract user from JWT
-    // --------------------------------------------------
     private User getUser(String tokenHeader) {
         try {
             String token = tokenHeader.substring(7);
@@ -40,9 +38,7 @@ public class AnomalyRecordController {
         }
     }
 
-    // --------------------------------------------------
-    // Validate that account belongs to the logged-in user
-    // --------------------------------------------------
+    // Validate that account belongs to the logged-in use
     private BankAccount validateAccountOwner(Long accountId, Long userId) {
         BankAccount acc = bankAccountRepository.findById(accountId)
                 .orElseThrow(() -> new RuntimeException("Bank account not found"));
@@ -53,9 +49,8 @@ public class AnomalyRecordController {
         return acc;
     }
 
-    // --------------------------------------------------
+
     // GET ALL anomalies for a specific bank account
-    // --------------------------------------------------
     @GetMapping("/account/{accountId}")
     public ResponseEntity<?> getAllByAccount(
             @RequestHeader("Authorization") String token,
@@ -79,9 +74,7 @@ public class AnomalyRecordController {
         }
     }
 
-    // --------------------------------------------------
     // GET a single anomaly (account owner only)
-    // --------------------------------------------------
     @GetMapping("/{id}")
     public ResponseEntity<?> getOne(
             @RequestHeader("Authorization") String token,
@@ -105,9 +98,7 @@ public class AnomalyRecordController {
         }
     }
 
-    // --------------------------------------------------
     // DELETE anomaly (only account owner)
-    // --------------------------------------------------
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(
             @RequestHeader("Authorization") String token,

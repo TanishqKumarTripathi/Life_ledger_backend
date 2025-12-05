@@ -224,38 +224,9 @@ public class GeminiServiceImpl implements GeminiService {
             }
 
             // -------------------------
-            // 2) RECURRING PATTERNS
+            // 2) RECURRING PATTERNS - Handled by RecurringPatternService
             // -------------------------
-            if (result.has("recurring") && result.get("recurring").isArray()) {
-                for (JsonNode item : result.get("recurring")) {
-                    try {
-                        String merchant = item.path("merchant").asText("");
-                        double totalAmount = item.path("totalAmount").asDouble(0.0);
-                        String frequency = item.path("frequency").asText("");
-                        String nextDueDateStr = item.path("nextDueDate").asText(null);
-
-                        RecurringPattern rp = new RecurringPattern();
-                        rp.setMerchant(merchant);
-                        rp.setAmount(BigDecimal.valueOf(totalAmount));
-                        rp.setFrequency(frequency != null ? frequency : "");
-                        if (nextDueDateStr != null && !nextDueDateStr.isBlank()) {
-                            try {
-                                rp.setNextDueDate(LocalDate.parse(nextDueDateStr));
-                            } catch (Exception pe) {
-                                // ignore parse problem
-                                System.err.println("⚠️ Could not parse nextDueDate: " + nextDueDateStr);
-                            }
-                        }
-                        // bankAccount not set here (requires context), leave null
-                        recurringPatternRepository.save(rp);
-                        System.out.println("🔄 Saved recurring pattern for merchant: " + merchant);
-                    } catch (Exception e) {
-                        System.err.println("❌ Error saving recurring pattern: " + e.getMessage());
-                    }
-                }
-            } else {
-                System.out.println("ℹ️ No 'recurring' array or it's not an array");
-            }
+            System.out.println("ℹ️ Recurring patterns will be processed by RecurringPatternService");
 
             // -------------------------
             // 3) ANOMALIES

@@ -19,11 +19,18 @@ import java.util.ArrayList;
 public class InsightServiceImpl implements InsightService {
 
     private final InsightRepository insightRepository;
+    private final RecurringPatternService recurringPatternService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
+    @Transactional
     public Insight createInsight(Insight insight) {
-        return insightRepository.save(insight);
+        Insight savedInsight = insightRepository.save(insight);
+        
+        // Process recurring patterns after insight creation
+        recurringPatternService.processInsightPatterns(savedInsight);
+        
+        return savedInsight;
     }
 
     @Override
