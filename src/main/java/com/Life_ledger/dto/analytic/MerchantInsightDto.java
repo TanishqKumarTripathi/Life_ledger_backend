@@ -6,9 +6,8 @@ import lombok.*;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class CategoryInsightDto {
+public class MerchantInsightDto {
     private String name;
     private double amount;
     private long count;
-    private String color;
 }

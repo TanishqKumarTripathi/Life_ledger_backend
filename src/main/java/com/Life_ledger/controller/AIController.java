@@ -11,6 +11,9 @@ import com.Life_ledger.service.InsightService;
 import com.Life_ledger.service.RecurringPatternService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.Life_ledger.service.GeminiServiceImpl.Step;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -144,7 +147,7 @@ public class AIController {
                     .orElseThrow(() -> new RuntimeException("Invalid user"));
 
             Object sectionData = insightService.getInsightSection(user.getId(), sectionName);
-            
+
             if (sectionData == null) {
                 return ResponseEntity.ok(Map.of(
                         "status", "empty",
