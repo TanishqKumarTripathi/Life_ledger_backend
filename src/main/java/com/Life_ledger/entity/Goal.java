@@ -49,6 +49,11 @@ public class Goal {
     @JoinColumn(name = "user_id")
     @JsonIgnore
     private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "bank_account_id")
+    @JsonIgnore
+    private BankAccount bankAccount;
 }
 
 

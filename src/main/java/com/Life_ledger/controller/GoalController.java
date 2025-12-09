@@ -27,17 +27,25 @@ public class GoalController {
     @PostMapping
     public ResponseEntity<GoalResponse> createGoal(
             @RequestHeader("Authorization") String token,
-            @RequestBody GoalRequest request) {
+            @RequestBody GoalRequest request,
+            @RequestParam(required = false) Long accountId) {
         Long userId = getUserIdFromToken(token);
         request.setUserId(userId);
-        return ResponseEntity.ok(goalService.createGoal(request));
+        GoalResponse goal = accountId != null 
+            ? goalService.createGoalForAccount(request, accountId)
+            : goalService.createGoal(request);
+        return ResponseEntity.ok(goal);
     }
 
     @GetMapping
     public ResponseEntity<List<GoalResponse>> getUserGoals(
-            @RequestHeader("Authorization") String token) {
+            @RequestHeader("Authorization") String token,
+            @RequestParam(required = false) Long accountId) {
         Long userId = getUserIdFromToken(token);
-        return ResponseEntity.ok(goalService.getGoalsByUser(userId));
+        List<GoalResponse> goals = accountId != null 
+            ? goalService.getGoalsByAccount(accountId)
+            : goalService.getGoalsByUser(userId);
+        return ResponseEntity.ok(goals);
     }
 
     @PutMapping("/{goalId}")

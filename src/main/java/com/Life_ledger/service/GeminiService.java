@@ -6,5 +6,7 @@ public interface GeminiService {
     String listModels();
 
     Object analyzeUserTransactions(Long userId);
+    
+    Object analyzeAccountTransactions(Long accountId);
 
 }

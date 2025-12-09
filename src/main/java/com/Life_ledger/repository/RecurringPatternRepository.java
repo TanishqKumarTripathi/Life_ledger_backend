@@ -20,4 +20,12 @@ public interface RecurringPatternRepository extends JpaRepository<RecurringPatte
            "LEFT JOIN FETCH rp.transaction t " +
            "LEFT JOIN FETCH t.bankAccount")
     List<RecurringPattern> findAllWithBankAccount();
+
+    @Query("SELECT rp FROM RecurringPattern rp " +
+           "LEFT JOIN FETCH rp.transaction t " +
+           "LEFT JOIN FETCH rp.bankAccount ba " +
+           "WHERE t.bankAccount.id = :accountId")
+    List<RecurringPattern> findByBankAccountId(@Param("accountId") Long accountId);
+
+    void deleteByBankAccountId(Long bankAccountId);
 }

@@ -2,6 +2,7 @@ package com.Life_ledger.service;
 
 import com.Life_ledger.entity.*;
 import com.Life_ledger.repository.*;
+import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,6 +31,7 @@ public class GeminiServiceImpl implements GeminiService {
     private final CategoryRepository categoryRepository;
     private final SubCategoryRepository subCategoryRepository;
     private final RecurringPatternRepository recurringPatternRepository;
+    private final AnomalyRecordRepository anomalyRecordRepository;
 
     @Value("${gemini.api.key}")
     private String apiKey;
@@ -234,19 +236,37 @@ public class GeminiServiceImpl implements GeminiService {
             if (result.has("anomalies") && result.get("anomalies").isArray()) {
                 for (JsonNode item : result.get("anomalies")) {
                     try {
-                        long txnId = item.path("id").asLong(0L);
-                        if (txnId == 0L)
-                            continue;
-
-                        Transaction txn = transactionRepository.findById(txnId).orElse(null);
-                        if (txn == null) {
-                            System.out.println("⚠️ anomaly - transaction not found for id " + txnId);
-                            continue;
+                        String date = item.path("date").asText();
+                        double amount = item.path("amount").asDouble(0.0);
+                        String merchant = item.path("merchant").asText();
+                        String reason = item.path("reason").asText();
+                        String category = item.path("category").asText();
+                        
+                        // Find matching transaction by date, amount, and merchant
+                        List<Transaction> matchingTxns = transactionRepository.findByMerchantAndAmountRange(
+                            userId, merchant, BigDecimal.valueOf(amount), new BigDecimal("10.00")
+                        );
+                        
+                        if (!matchingTxns.isEmpty()) {
+                            Transaction txn = matchingTxns.get(0);
+                            txn.setAnomaly(true);
+                            transactionRepository.save(txn);
+                            
+                            // Create detailed anomaly record
+                            AnomalyRecord anomalyRecord = AnomalyRecord.builder()
+                                .transaction(txn)
+                                .reason(reason)
+                                .confidence(0.85) // Default confidence
+                                .anomalyType("AI_DETECTED")
+                                .bankAccount(txn.getBankAccount())
+                                .createdAt(java.time.LocalDateTime.now())
+                                .build();
+                                
+                            anomalyRecordRepository.save(anomalyRecord);
+                            System.out.println("⚠️ Created anomaly record for transaction: " + txn.getMerchant());
+                        } else {
+                            System.out.println("⚠️ No matching transaction found for anomaly: " + merchant);
                         }
-
-                        txn.setAnomaly(true);
-                        transactionRepository.save(txn);
-                        System.out.println("⚠️ Marked transaction " + txnId + " as anomaly" + txn.getMerchant());
                     } catch (Exception e) {
                         System.err.println("❌ Error processing anomaly item: " + e.getMessage());
                     }
@@ -409,5 +429,103 @@ public class GeminiServiceImpl implements GeminiService {
     @Override
     public String listModels() {
         return "gemini-flash-latest";
+    }
+
+    @Override
+    public Object analyzeAccountTransactions(Long accountId) {
+        Map<String, Object> resp = new HashMap<>();
+        try {
+            // Load transactions for specific bank account
+            List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
+            if (txns == null || txns.isEmpty()) {
+                resp.put("status", "error");
+                resp.put("message", "No transactions found for this account");
+                return resp;
+            }
+
+            // Get user ID from first transaction for rules and goals
+            Long userId = txns.get(0).getBankAccount().getUser().getId();
+
+            // Convert transactions to clean JSON-friendly maps
+            List<Map<String, Object>> cleanTxns = new ArrayList<>();
+            for (Transaction t : txns) {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", t.getId());
+                m.put("date", t.getDate() != null ? t.getDate().toString() : null);
+                m.put("amount", t.getAmount() != null ? t.getAmount().doubleValue() : 0.0);
+                m.put("merchant", t.getMerchant() != null ? t.getMerchant() : "");
+                m.put("description", t.getNotes() != null ? t.getNotes() : "");
+                cleanTxns.add(m);
+            }
+
+            // Load user rules and goals (same as user analysis)
+            List<Map<String, Object>> cleanRules = new ArrayList<>();
+            List<Rule> rules = ruleRepository.findByUser_IdOrderByPriorityAsc(userId);
+            if (rules != null) {
+                for (Rule r : rules) {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("keyword", r.getKeyword());
+                    m.put("regex", r.getRegex());
+                    m.put("minAmount", r.getMinAmount());
+                    m.put("maxAmount", r.getMaxAmount());
+                    m.put("priority", r.getPriority());
+                    m.put("category", r.getCategory() != null ? r.getCategory().getName() : null);
+                    m.put("subCategory", r.getSubCategory() != null ? r.getSubCategory().getName() : null);
+                    cleanRules.add(m);
+                }
+            }
+
+            List<Map<String, Object>> cleanGoals = new ArrayList<>();
+            List<Goal> goals = goalRepository.findByUser_Id(userId);
+            if (goals != null) {
+                for (Goal g : goals) {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("name", g.getName());
+                    m.put("category", g.getCategory());
+                    m.put("targetAmount", g.getTargetAmount());
+                    m.put("currentAmount", g.getCurrentAmount());
+                    m.put("deadline", g.getDeadline() != null ? g.getDeadline().toString() : null);
+                    m.put("type", g.getType() != null ? g.getType().toString() : null);
+                    m.put("status", g.getStatus() != null ? g.getStatus().toString() : null);
+                    cleanGoals.add(m);
+                }
+            }
+
+            // Build prompt and call Gemini
+            String prompt = buildAnalysisPrompt(cleanTxns, cleanRules, cleanGoals);
+            String jsonResponse = callGemini(prompt);
+            
+            if (jsonResponse == null || jsonResponse.isBlank()) {
+                resp.put("status", "error");
+                resp.put("message", "Empty response from Gemini");
+                return resp;
+            }
+
+            JsonNode parsed;
+            try {
+                parsed = objectMapper.readTree(jsonResponse);
+            } catch (Exception parseEx) {
+                resp.put("status", "error");
+                resp.put("message", "Unable to parse Gemini JSON: " + parseEx.getMessage());
+                resp.put("raw", jsonResponse);
+                return resp;
+            }
+
+            // Save AI results (same as user analysis)
+            saveAIResults(userId, parsed);
+
+            // Return response
+            resp.put("status", "success");
+            resp.put("accountId", accountId);
+            resp.put("userId", userId);
+            resp.put("analysis", parsed);
+            return resp;
+            
+        } catch (Exception e) {
+            System.err.println("❌ Account-specific Gemini Analysis Failed: " + e.getMessage());
+            resp.put("status", "error");
+            resp.put("message", e.getMessage());
+            return resp;
+        }
     }
 }

@@ -22,6 +22,10 @@ public class Insight {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bank_account_id")
+    private BankAccount bankAccount;
+
     @Lob
     @Column(name = "ai_text", columnDefinition = "TEXT")
     private String aiText;

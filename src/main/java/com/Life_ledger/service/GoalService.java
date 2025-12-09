@@ -11,10 +11,14 @@ import java.util.Optional;
 public interface GoalService {
 
     GoalResponse createGoal(GoalRequest request);
+    
+    GoalResponse createGoalForAccount(GoalRequest request, Long accountId);
 
     GoalResponse getGoalByIdAndUser(Long goalId, Long userId);
 
     List<GoalResponse> getGoalsByUser(Long userId);
+    
+    List<GoalResponse> getGoalsByAccount(Long accountId);
 
     GoalResponse updateGoal(Long goalId, GoalRequest request);
 

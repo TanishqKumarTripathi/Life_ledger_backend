@@ -10,4 +10,6 @@ import java.util.List;
 public interface GoalRepository extends JpaRepository<Goal, Long> {
     List<Goal> findByUser(User user);
     List<Goal> findByUser_Id(Long userId);
+    
+    List<Goal> findByBankAccountId(Long bankAccountId);
 }

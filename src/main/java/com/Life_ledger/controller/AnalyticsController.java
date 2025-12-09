@@ -38,10 +38,14 @@ public class AnalyticsController {
     }
 
     @GetMapping("/latest")
-    public ResponseEntity<?> getLatestAnalytics(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<?> getLatestAnalytics(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(required = false) Long accountId) {
         try {
             User user = getUserFromToken(token);
-            AnalyticsDTO analytics = analyticsService.getLatestAnalytics(user.getId());
+            AnalyticsDTO analytics = accountId != null 
+                ? analyticsService.getLatestAnalyticsByAccount(accountId)
+                : analyticsService.getLatestAnalytics(user.getId());
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",

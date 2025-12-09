@@ -24,10 +24,26 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public RecurringPattern createRecurringPattern(RecurringPattern recurringPattern) {
+    public RecurringPattern createRecurringPattern(RecurringPattern recurringPattern, Long userId) {
         // Set bank account from transaction if not already set
-        if (recurringPattern.getBankAccount() == null && recurringPattern.getTransaction() != null) {
-            recurringPattern.setBankAccount(recurringPattern.getTransaction().getBankAccount());
+        if (recurringPattern.getBankAccount() == null) {
+            if (recurringPattern.getTransaction() != null) {
+                recurringPattern.setBankAccount(recurringPattern.getTransaction().getBankAccount());
+            } else if (recurringPattern.getMerchant() != null && recurringPattern.getAmount() != null && userId != null) {
+                // Find matching transaction to get bank account
+                List<Transaction> matchingTxns = transactionRepository.findByMerchantAndAmountRange(
+                    userId,
+                    recurringPattern.getMerchant(), 
+                    recurringPattern.getAmount(), 
+                    new BigDecimal("50.00")
+                );
+                if (!matchingTxns.isEmpty() && matchingTxns.get(0).getBankAccount() != null) {
+                    recurringPattern.setBankAccount(matchingTxns.get(0).getBankAccount());
+                    if (recurringPattern.getTransaction() == null) {
+                        recurringPattern.setTransaction(matchingTxns.get(0));
+                    }
+                }
+            }
         }
         return recurringPatternRepository.save(recurringPattern);
     }
@@ -71,6 +87,12 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<RecurringPattern> getRecurringPatternsByAccountId(Long accountId) {
+        return recurringPatternRepository.findByBankAccountId(accountId);
+    }
+
+    @Override
     public void deleteRecurringPattern(Long id) {
         recurringPatternRepository.deleteById(id);
     }
@@ -83,22 +105,75 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
             System.out.println("AI Text length: " + (insight.getAiText() != null ? insight.getAiText().length() : 0));
             
             JsonNode rootNode = objectMapper.readTree(insight.getAiText());
-            JsonNode recurringNode = rootNode.path("recurring");
             
-            System.out.println(" Recurring node exists: " + !recurringNode.isMissingNode());
-            System.out.println(" Recurring node is array: " + recurringNode.isArray());
+            // Debug: Print all available keys
+            System.out.println("🔍 Available JSON keys: ");
+            rootNode.fieldNames().forEachRemaining(key -> System.out.println("  - " + key));
             
-            if (recurringNode.isArray()) {
-                System.out.println(" Found " + recurringNode.size() + " recurring patterns in AI response");
+            // Debug: Print first 500 chars of AI text
+            String aiTextPreview = insight.getAiText().length() > 500 
+                ? insight.getAiText().substring(0, 500) + "..."
+                : insight.getAiText();
+            System.out.println("🔍 AI Text preview: " + aiTextPreview);
+            
+            // Try multiple possible nested paths for recurring data
+            JsonNode recurringNode = null;
+            String foundPath = "none";
+            
+            // Check direct paths first
+            String[] directPaths = {"recurring", "patterns", "recurringPatterns"};
+            for (String path : directPaths) {
+                recurringNode = rootNode.path(path);
+                if (!recurringNode.isMissingNode() && recurringNode.isArray()) {
+                    foundPath = path;
+                    break;
+                }
+            }
+            
+            // Check nested paths under "analysis"
+            if (recurringNode == null || recurringNode.isMissingNode()) {
+                JsonNode analysisNode = rootNode.path("analysis");
+                if (!analysisNode.isMissingNode()) {
+                    for (String path : directPaths) {
+                        recurringNode = analysisNode.path(path);
+                        if (!recurringNode.isMissingNode() && recurringNode.isArray()) {
+                            foundPath = "analysis." + path;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            System.out.println("🔍 Found recurring data at path: " + foundPath);
+            
+            System.out.println("🔍 Recurring node exists: " + !recurringNode.isMissingNode());
+            System.out.println("🔍 Recurring node is array: " + recurringNode.isArray());
+            if (!recurringNode.isMissingNode()) {
+                System.out.println("🔍 Recurring node content: " + recurringNode.toString());
+            }
+            
+            if (recurringNode != null && !recurringNode.isMissingNode() && recurringNode.isArray()) {
+                System.out.println("🔍 Found " + recurringNode.size() + " recurring patterns in AI response");
                 Long userId = insight.getUser().getId();
                 
                 for (JsonNode patternNode : recurringNode) {
-                    System.out.println(" Pattern node: " + patternNode.toString());
-                    createPatternFromJson(patternNode, userId);
+                    System.out.println("🔍 Processing pattern node: " + patternNode.toString());
+                    try {
+                        createPatternFromJson(patternNode, userId);
+                        System.out.println("✅ Pattern processed successfully");
+                    } catch (Exception e) {
+                        System.err.println("❌ Error processing pattern: " + e.getMessage());
+                        e.printStackTrace();
+                    }
                 }
             } else {
-                System.out.println(" No recurring array found in AI response");
-                System.out.println(" Available keys: " + rootNode.fieldNames());
+                System.out.println("❌ No recurring array found in AI response");
+                System.out.println("🔍 RecurringNode is null: " + (recurringNode == null));
+                System.out.println("🔍 RecurringNode is missing: " + (recurringNode != null && recurringNode.isMissingNode()));
+                System.out.println("🔍 RecurringNode is array: " + (recurringNode != null && recurringNode.isArray()));
+                if (recurringNode != null) {
+                    System.out.println("🔍 RecurringNode content: " + recurringNode.toString());
+                }
             }
         } catch (Exception e) {
             System.err.println(" Error processing recurring patterns: " + e.getMessage());
@@ -107,18 +182,27 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
     }
 
     private void createPatternFromJson(JsonNode patternNode, Long userId) {
-        String merchant = patternNode.path("merchant").asText();
-        double amountValue = patternNode.path("totalAmount").asDouble(0.0);
-        if (amountValue == 0.0) {
-            amountValue = patternNode.path("amount").asDouble(0.0);
-        }
-        BigDecimal amount = BigDecimal.valueOf(amountValue);
+        // Handle the actual AI response format
+        String description = patternNode.path("description").asText();
+        String amountRange = patternNode.path("amount_range").asText();
         String frequency = patternNode.path("frequency").asText("Monthly");
+        String category = patternNode.path("category").asText();
         
-        System.out.println(" Processing recurring pattern: merchant=" + merchant + ", amount=" + amount + ", frequency=" + frequency);
+        // Extract merchant name from description (first part before parentheses)
+        String merchant = extractMerchantFromDescription(description);
+        
+        // Extract amount from amount_range (use middle value or first number found)
+        BigDecimal amount = extractAmountFromRange(amountRange);
+        
+        System.out.println("🔍 Processing recurring pattern:");
+        System.out.println("🔍   - Description: " + description);
+        System.out.println("🔍   - Amount Range: " + amountRange);
+        System.out.println("🔍   - Extracted Merchant: " + merchant);
+        System.out.println("🔍   - Extracted Amount: " + amount);
+        System.out.println("🔍   - Frequency: " + frequency);
         
         if (merchant.isEmpty() || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            System.out.println(" Skipping pattern - empty merchant or zero amount");
+            System.out.println("❌ Skipping pattern - empty merchant (" + merchant.isEmpty() + ") or zero amount (" + amount + ")");
             return;
         }
         
@@ -174,5 +258,38 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
             case "yearly" -> now.plusYears(1);
             default -> now.plusMonths(1); // Monthly default
         };
+    }
+    
+    private String extractMerchantFromDescription(String description) {
+        // Extract merchant from patterns like "Internet/Fiber Bill (Air Fiber/Jio)"
+        if (description.contains("(")) {
+            int start = description.indexOf("(") + 1;
+            int end = description.indexOf(")");
+            if (end > start) {
+                String merchant = description.substring(start, end);
+                // Take first merchant if multiple separated by /
+                return merchant.split("/")[0].trim();
+            }
+        }
+        // Fallback: use first part before parentheses
+        return description.split("\\(")[0].trim();
+    }
+    
+    private BigDecimal extractAmountFromRange(String amountRange) {
+        // Handle patterns like "₹1,047.84", "₹3,000 to ₹7,000", "Approx. ₹1,000"
+        String cleanRange = amountRange.replaceAll("[₹,Approx.to]", "").trim();
+        
+        // Extract first number found
+        String[] parts = cleanRange.split("\\s+");
+        for (String part : parts) {
+            try {
+                return new BigDecimal(part);
+            } catch (NumberFormatException e) {
+                // Continue to next part
+            }
+        }
+        
+        // Fallback: return 0 if no valid number found
+        return BigDecimal.ZERO;
     }
 }

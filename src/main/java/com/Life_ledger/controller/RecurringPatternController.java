@@ -46,8 +46,8 @@ public class RecurringPatternController {
             @RequestHeader("Authorization") String token,
             @RequestBody RecurringPattern recurringPattern) {
         try {
-            getUserFromToken(token);
-            return ResponseEntity.ok(recurringPatternService.createRecurringPattern(recurringPattern));
+            User user = getUserFromToken(token);
+            return ResponseEntity.ok(recurringPatternService.createRecurringPattern(recurringPattern, user.getId()));
         } catch (Exception ex) {
             return ResponseEntity.status(400).body(Map.of("status", "error", "message", ex.getMessage()));
         }
@@ -66,12 +66,17 @@ public class RecurringPatternController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAll(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<?> getAll(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(required = false) Long accountId) {
         try {
             User user = getUserFromToken(token);
+            List<RecurringPattern> patterns = accountId != null 
+                ? recurringPatternService.getRecurringPatternsByAccountId(accountId)
+                : recurringPatternService.getRecurringPatternsByUserId(user.getId());
             return ResponseEntity.ok(Map.of(
                 "status", "success",
-                "patterns", recurringPatternService.getRecurringPatternsByUserId(user.getId())
+                "patterns", patterns
             ));
         } catch (Exception ex) {
             return ResponseEntity.status(400).body(Map.of("status", "error", "message", ex.getMessage()));

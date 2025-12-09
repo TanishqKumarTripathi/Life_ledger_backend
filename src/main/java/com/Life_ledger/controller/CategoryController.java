@@ -31,10 +31,14 @@ public class CategoryController {
     @PostMapping
     public ResponseEntity<CategoryResponse> createCategory(
             @RequestHeader("Authorization") String token,
-            @RequestBody CategoryRequest request) {
+            @RequestBody CategoryRequest request,
+            @RequestParam(required = false) Long accountId) {
 
         User user = getUserFromToken(token);
-        return ResponseEntity.ok(categoryService.createCategory(user.getId(), request));
+        CategoryResponse category = accountId != null 
+            ? categoryService.createCategoryForAccount(accountId, request)
+            : categoryService.createCategory(user.getId(), request);
+        return ResponseEntity.ok(category);
     }
 
     @GetMapping("/{id}")
@@ -48,10 +52,14 @@ public class CategoryController {
 
     @GetMapping
     public ResponseEntity<List<CategoryResponse>> getAllCategories(
-            @RequestHeader("Authorization") String token) {
+            @RequestHeader("Authorization") String token,
+            @RequestParam(required = false) Long accountId) {
 
         User user = getUserFromToken(token);
-        return ResponseEntity.ok(categoryService.getAllCategories(user.getId()));
+        List<CategoryResponse> categories = accountId != null 
+            ? categoryService.getCategoriesByAccount(accountId)
+            : categoryService.getAllCategories(user.getId());
+        return ResponseEntity.ok(categories);
     }
 
     @PutMapping("/{id}")

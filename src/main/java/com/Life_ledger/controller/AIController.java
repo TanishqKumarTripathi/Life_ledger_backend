@@ -1,6 +1,7 @@
 package com.Life_ledger.controller;
 
 import com.Life_ledger.dto.insight.InsightResponseDTO;
+import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.Insight;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.repository.InsightRepository;
@@ -11,7 +12,7 @@ import com.Life_ledger.service.InsightService;
 import com.Life_ledger.service.RecurringPatternService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.Life_ledger.service.GeminiServiceImpl.Step;
+//import com.Life_ledger.service.GeminiServiceImpl.Step;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
@@ -51,9 +52,9 @@ public class AIController {
 
     // RUN AI ANALYSIS → SAVE TO DB (Called when user opens AI Insights)
     @PostMapping("/analyze")
-    @Transactional
     public ResponseEntity<?> analyze(
-            @RequestHeader("Authorization") String tokenHeader) {
+            @RequestHeader("Authorization") String tokenHeader,
+            @RequestParam(required = false) Long accountId) {
 
         try {
             String token = tokenHeader.substring(7);
@@ -63,18 +64,39 @@ public class AIController {
 
             Long userId = user.getId();
 
-            // Always run Gemini AI analysis
-            Object analysisResult = geminiService.analyzeUserTransactions(userId);
-            String jsonText = objectMapper.writeValueAsString(analysisResult);
+            // Run AI analysis - account-specific or user-wide
+            Object analysisResult = accountId != null 
+                ? geminiService.analyzeAccountTransactions(accountId)
+                : geminiService.analyzeUserTransactions(userId);
+            
+            // Extract just the analysis part for insight storage
+            Map<String, Object> result = (Map<String, Object>) analysisResult;
+            Object analysis = result.get("analysis");
+            String jsonText = objectMapper.writeValueAsString(analysis);
 
-            // Save insight
+            // Save insight with correct AI text
             Insight insight = new Insight();
             insight.setAiText(jsonText);
             insight.setUser(user);
+            
+            // Set bank account if analyzing specific account
+            if (accountId != null) {
+                BankAccount bankAccount = new BankAccount();
+                bankAccount.setId(accountId);
+                insight.setBankAccount(bankAccount);
+            }
+            
             insight = insightRepository.save(insight);
 
             // Extract and save recurring patterns
-            recurringPatternService.processInsightPatterns(insight);
+            try {
+                recurringPatternService.processInsightPatterns(insight);
+                System.out.println("✅ Recurring patterns processed successfully");
+            } catch (Exception patternEx) {
+                System.err.println("❌ Pattern processing failed: " + patternEx.getMessage());
+                patternEx.printStackTrace();
+                // Continue execution even if pattern processing fails
+            }
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
@@ -83,9 +105,13 @@ public class AIController {
             ));
 
         } catch (Exception ex) {
+            System.err.println("❌ AI Analysis Error: " + ex.getMessage());
+            ex.printStackTrace();
+            
             return ResponseEntity.status(400).body(Map.of(
                     "status", "error",
-                    "message", ex.getMessage()
+                    "message", ex.getMessage(),
+                    "details", ex.getClass().getSimpleName()
             ));
         }
     }
@@ -95,7 +121,8 @@ public class AIController {
     @GetMapping("/latest")
     @Transactional(readOnly = true)
     public ResponseEntity<?> getLatestInsight(
-            @RequestHeader("Authorization") String tokenHeader) {
+            @RequestHeader("Authorization") String tokenHeader,
+            @RequestParam(required = false) Long accountId) {
 
         try {
             // Extract user
@@ -105,10 +132,10 @@ public class AIController {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("Invalid user"));
 
-            // Fetch latest insight
-            Insight insight = insightRepository
-                    .findTopByUserIdOrderByCreatedAtDesc(user.getId())
-                    .orElse(null);
+            // Fetch latest insight - account-specific or user-wide
+            Insight insight = accountId != null
+                    ? insightRepository.findTopByBankAccountIdOrderByCreatedAtDesc(accountId).orElse(null)
+                    : insightRepository.findTopByUserIdOrderByCreatedAtDesc(user.getId()).orElse(null);
 
             if (insight == null) {
                 return ResponseEntity.ok(Map.of(
@@ -138,7 +165,8 @@ public class AIController {
     @Transactional(readOnly = true)
     public ResponseEntity<?> getInsightSection(
             @RequestHeader("Authorization") String tokenHeader,
-            @PathVariable String sectionName) {
+            @PathVariable String sectionName,
+            @RequestParam(required = false) Long accountId) {
 
         try {
             String token = tokenHeader.substring(7);
@@ -146,7 +174,9 @@ public class AIController {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("Invalid user"));
 
-            Object sectionData = insightService.getInsightSection(user.getId(), sectionName);
+            Object sectionData = accountId != null
+                ? insightService.getInsightSectionByAccount(accountId, sectionName)
+                : insightService.getInsightSection(user.getId(), sectionName);
 
             if (sectionData == null) {
                 return ResponseEntity.ok(Map.of(
@@ -172,7 +202,8 @@ public class AIController {
     @GetMapping("/insights/status")
     @Transactional(readOnly = true)
     public ResponseEntity<?> getAnalysisStatus(
-            @RequestHeader("Authorization") String tokenHeader) {
+            @RequestHeader("Authorization") String tokenHeader,
+            @RequestParam(required = false) Long accountId) {
 
         try {
             String token = tokenHeader.substring(7);
@@ -180,8 +211,12 @@ public class AIController {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("Invalid user"));
 
-            Insight latest = insightService.getLatestInsight(user.getId());
-            boolean hasRecent = insightService.hasRecentAnalysis(user.getId(), 24);
+            Insight latest = accountId != null
+                ? insightService.getLatestInsightByAccount(accountId)
+                : insightService.getLatestInsight(user.getId());
+            boolean hasRecent = accountId != null
+                ? insightService.hasRecentAnalysisByAccount(accountId, 24)
+                : insightService.hasRecentAnalysis(user.getId(), 24);
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",

@@ -24,5 +24,8 @@ public interface InsightService {
     
     // AI Analysis methods
     Object getInsightSection(Long userId, String sectionName);
+    Object getInsightSectionByAccount(Long accountId, String sectionName);
     boolean hasRecentAnalysis(Long userId, int hours);
+    boolean hasRecentAnalysisByAccount(Long accountId, int hours);
+    Insight getLatestInsightByAccount(Long accountId);
 }

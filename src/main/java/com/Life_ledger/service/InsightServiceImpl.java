@@ -125,6 +125,47 @@ public class InsightServiceImpl implements InsightService {
         return latest.getCreatedAt().isAfter(cutoff);
     }
 
+    @Override
+    public Insight getLatestInsightByAccount(Long accountId) {
+        return insightRepository.findTopByBankAccountIdOrderByCreatedAtDesc(accountId)
+                .orElse(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Object getInsightSectionByAccount(Long accountId, String sectionName) {
+        Insight latest = getLatestInsightByAccount(accountId);
+        if (latest == null) return null;
+        
+        try {
+            JsonNode rootNode = objectMapper.readTree(latest.getAiText());
+            
+            switch (sectionName.toLowerCase()) {
+                case "health":
+                    return parseHealthSection(rootNode);
+                case "spending":
+                    return parseSpendingSection(rootNode);
+                case "patterns":
+                    return parsePatternsSection(rootNode);
+                case "anomalies":
+                    return parseAnomaliesSection(rootNode);
+                default:
+                    return rootNode.get(sectionName);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error parsing insight section: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean hasRecentAnalysisByAccount(Long accountId, int hours) {
+        Insight latest = getLatestInsightByAccount(accountId);
+        if (latest == null) return false;
+        
+        LocalDateTime cutoff = LocalDateTime.now().minusHours(hours);
+        return latest.getCreatedAt().isAfter(cutoff);
+    }
+
     private Object parseHealthSection(JsonNode rootNode) {
         JsonNode healthNode = rootNode.get("financialHealth");
         if (healthNode == null) return null;

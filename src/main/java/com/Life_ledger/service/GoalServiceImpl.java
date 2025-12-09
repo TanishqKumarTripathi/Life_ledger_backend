@@ -2,11 +2,13 @@ package com.Life_ledger.service;
 
 import com.Life_ledger.dto.goals.GoalRequest;
 import com.Life_ledger.dto.goals.GoalResponse;
+import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.Goal;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.Enum.GoalStatus;
 import com.Life_ledger.exception.AppException;
 import com.Life_ledger.mapper.GoalMapper;
+import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.GoalRepository;
 import com.Life_ledger.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class GoalServiceImpl implements GoalService {
 
     private final GoalRepository goalRepository;
     private final UserRepository userRepository;
+    private final BankAccountRepository bankAccountRepository;
     private final GoalMapper goalMapper;
 
     @Override
@@ -152,5 +155,29 @@ public class GoalServiceImpl implements GoalService {
         } else {
             goal.setStatus(GoalStatus.ACTIVE);
         }
+    }
+
+    @Override
+    public GoalResponse createGoalForAccount(GoalRequest req, Long accountId) {
+        BankAccount bankAccount = bankAccountRepository.findById(accountId)
+                .orElseThrow(() -> new AppException("Bank account not found"));
+
+        Goal goal = goalMapper.toEntity(req);
+        goal.setUser(bankAccount.getUser());
+        goal.setBankAccount(bankAccount);
+
+        Goal saved = goalRepository.save(goal);
+        return GoalResponse.from(saved);
+    }
+
+    @Override
+    public List<GoalResponse> getGoalsByAccount(Long accountId) {
+        List<Goal> goals = goalRepository.findByBankAccountId(accountId);
+
+        goals.forEach(this::updateGoalStatus);
+
+        return goals.stream()
+                .map(GoalResponse::from)
+                .toList();
     }
 }

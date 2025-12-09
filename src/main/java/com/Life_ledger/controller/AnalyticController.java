@@ -33,9 +33,13 @@ public class AnalyticController {
     // Dashboard stats
     @GetMapping("/dashboard")
     public ResponseEntity<DashboardStatsDto> getDashboardStats(
-            @RequestHeader("Authorization") String token) {
+            @RequestHeader("Authorization") String token,
+            @RequestParam(required = false) Long accountId) {
         User user = getUserFromToken(token);
-        return ResponseEntity.ok(analyticsService.getDashboardStats(user.getId()));
+        DashboardStatsDto stats = accountId != null 
+            ? analyticsService.getDashboardStatsByAccount(accountId)
+            : analyticsService.getDashboardStats(user.getId());
+        return ResponseEntity.ok(stats);
     }
 
     // Category spending
@@ -54,10 +58,13 @@ public class AnalyticController {
     @GetMapping("/monthly")
     public ResponseEntity<List<MonthlyInsightDto>> getMonthlySpending(
             @RequestHeader("Authorization") String token,
-            @RequestParam(defaultValue = "6") int months) {
+            @RequestParam(defaultValue = "6") int months,
+            @RequestParam(required = false) Long accountId) {
 
         User user = getUserFromToken(token);
-        return ResponseEntity.ok(
-                analyticsService.getMonthlySpending(user.getId(), months));
+        List<MonthlyInsightDto> insights = accountId != null 
+            ? analyticsService.getMonthlySpendingByAccount(accountId, months)
+            : analyticsService.getMonthlySpending(user.getId(), months);
+        return ResponseEntity.ok(insights);
     }
 }

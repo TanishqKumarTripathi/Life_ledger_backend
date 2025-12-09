@@ -8,10 +8,14 @@ import com.Life_ledger.entity.User;
 import com.Life_ledger.mapper.AccountMapper;
 import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.UserRepository;
+import com.Life_ledger.repository.TransactionRepository;
+import com.Life_ledger.repository.RecurringPatternRepository;
+
 import com.Life_ledger.util.EncryptionUtil;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,6 +26,8 @@ public class AccountServiceImpl implements AccountService {
 
     private final BankAccountRepository bankAccountRepository;
     private final UserRepository userRepository;
+    private final TransactionRepository transactionRepository;
+    private final RecurringPatternRepository recurringPatternRepository;
     private final EncryptionUtil encryptionUtil;
 
     @Override
@@ -81,6 +87,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Transactional
     public String deleteAccount(Long userId, Long accountId) {
 
         BankAccount existing = bankAccountRepository.findById(accountId)
@@ -90,8 +97,14 @@ public class AccountServiceImpl implements AccountService {
             throw new RuntimeException("Unauthorized deletion");
         }
 
+        // Delete all associated data in correct order
+        recurringPatternRepository.deleteByBankAccountId(accountId);
+        transactionRepository.deleteByBankAccountId(accountId);
+        
+        // Finally delete the bank account
         bankAccountRepository.delete(existing);
-        return "Account deleted";
+        
+        return "Account and all associated data deleted successfully";
     }
 
     @Override

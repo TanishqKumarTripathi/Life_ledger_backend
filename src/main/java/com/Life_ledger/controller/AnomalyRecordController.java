@@ -50,6 +50,35 @@ public class AnomalyRecordController {
     }
 
 
+    // GET anomalies - all user anomalies or by specific account
+    @GetMapping
+    public ResponseEntity<?> getAnomalies(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(required = false) Long accountId) {
+
+        try {
+            User user = getUser(token);
+            List<AnomalyRecord> anomalies;
+            
+            if (accountId != null) {
+                validateAccountOwner(accountId, user.getId());
+                anomalies = anomalyService.getAnomaliesByBankAccount(accountId);
+            } else {
+                anomalies = anomalyService.getAnomaliesByBankAccount(accountId);
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "count", anomalies.size(),
+                    "anomalies", anomalies));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", e.getMessage()));
+        }
+    }
+
     // GET ALL anomalies for a specific bank account
     @GetMapping("/account/{accountId}")
     public ResponseEntity<?> getAllByAccount(

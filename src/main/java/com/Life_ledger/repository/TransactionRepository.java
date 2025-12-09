@@ -59,7 +59,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             "WHERE t.bankAccount.id = :accountId " +
             "GROUP BY t.merchant")
     List<Object[]> getMerchantTotals(Long accountId);
-}
+
     @Query("""
     SELECT t FROM Transaction t
     WHERE t.bankAccount.user.id = :userId
@@ -75,4 +75,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     ORDER BY t.date DESC
     """)
     List<Transaction> findByMerchantAndAmountRange(@Param("userId") Long userId, @Param("merchant") String merchant, @Param("amount") BigDecimal amount, @Param("tolerance") BigDecimal tolerance);
+
+    void deleteByBankAccountId(Long bankAccountId);
 }
