@@ -207,10 +207,10 @@ public class GeminiServiceImpl implements GeminiService {
                         }
                         if (category != null || subCategory != null) {
                             transactionRepository.save(txn);
-                            System.out.println("📌 Updated transaction " + txnId + " with category/subcategory");
+                            System.out.println("Updated transaction " + txnId + " with category/subcategory");
                         } else {
                             System.out.println(
-                                    "ℹ️ No category/subcategory provided for txn " + txnId + ", skipping update");
+                                    "ℹNo category/subcategory provided for txn " + txnId + ", skipping update");
                         }
                     } catch (Exception e) {
                         System.err.println("❌ Error processing categorized item: " + e.getMessage());
