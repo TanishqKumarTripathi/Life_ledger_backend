@@ -1,46 +1,55 @@
 package com.Life_ledger.controller;
 
-import com.Life_ledger.entity.RecurringPattern;
-import com.Life_ledger.service.RecurringPatternService;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import com.Life_ledger.dto.recurring.RecurringResponseDto;
+import com.Life_ledger.entity.RecurringPattern;
+import com.Life_ledger.mapper.Recurringmapper;
+import com.Life_ledger.repository.RecurringPatternRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/recurring")
+@RequestMapping("/api/recurring")
 @RequiredArgsConstructor
 public class RecurringPatternController {
 
-    private final RecurringPatternService recurringPatternService;
+    private final RecurringPatternRepository recurringPatternRepository;
+    private final Recurringmapper recurringMapper;
 
-    @PostMapping
-    public ResponseEntity<RecurringPattern> create(@RequestBody RecurringPattern recurringPattern) {
-        return ResponseEntity.ok(recurringPatternService.createRecurringPattern(recurringPattern));
+    /**
+     * Get all recurring transactions for a bank account
+     */
+    @GetMapping("/account/{accountId}")
+    public ResponseEntity<List<RecurringResponseDto>> getRecurringByAccount(
+            @PathVariable Long accountId) {
+
+        List<RecurringPattern> patterns = recurringPatternRepository.findByBankAccount_Id(accountId);
+
+        List<RecurringResponseDto> response = patterns.stream()
+                .map(recurringMapper::toDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<RecurringPattern> getOne(@PathVariable Long id) {
-        return ResponseEntity.ok(recurringPatternService.getRecurringPattern(id));
-    }
+    /**
+     * (Optional) Get all recurring transactions for a user
+     */
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<RecurringResponseDto>> getRecurringByUser(
+            @PathVariable Long userId) {
 
-    @GetMapping
-    public ResponseEntity<List<RecurringPattern>> getAll() {
-        return ResponseEntity.ok(recurringPatternService.getAllRecurringPatterns());
-    }
+        List<RecurringPattern> patterns = recurringPatternRepository.findByBankAccount_User_Id(userId);
 
-    @PutMapping("/{id}")
-    public ResponseEntity<RecurringPattern> update(
-            @PathVariable Long id,
-            @RequestBody RecurringPattern recurringPattern) {
+        List<RecurringResponseDto> response = patterns.stream()
+                .map(recurringMapper::toDto)
+                .collect(Collectors.toList());
 
-        return ResponseEntity.ok(recurringPatternService.updateRecurringPattern(id, recurringPattern));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable Long id) {
-        recurringPatternService.deleteRecurringPattern(id);
-        return ResponseEntity.ok("Recurring Pattern deleted successfully");
+        return ResponseEntity.ok(response);
     }
 }

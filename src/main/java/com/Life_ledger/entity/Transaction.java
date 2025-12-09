@@ -4,17 +4,14 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.concurrent.Flow.Subscriber;
 
+import com.Life_ledger.Enum.CategorySource;
 import com.Life_ledger.Enum.TransactionEnum;
 
 @Entity
 // @Table(name = "transactions")
 // @Table(name = "transactions")
-@Table(
-    name = "transactions",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"fingerprint", "bank_account_id"})
-)
+@Table(name = "transactions", uniqueConstraints = @UniqueConstraint(columnNames = { "fingerprint", "bank_account_id" }))
 
 @Getter
 @Setter
@@ -37,6 +34,9 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     private TransactionEnum typeTransaction;
 
+    @Enumerated(EnumType.STRING)
+    private CategorySource categorySource;
+
     private LocalDate date;
 
     private String notes;
@@ -45,7 +45,7 @@ public class Transaction {
 
     private boolean anomaly;
 
-    @Column(name = "fingerprint", nullable = false, length = 500)
+    @Column(name = "fingerprint", nullable = false, length = 500, unique = true)
     private String fingerprint;
 
     @ManyToOne

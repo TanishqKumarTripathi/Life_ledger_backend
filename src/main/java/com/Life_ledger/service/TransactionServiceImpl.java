@@ -8,6 +8,7 @@ import com.Life_ledger.mapper.TransactionMapper;
 import com.Life_ledger.repository.*;
 import com.Life_ledger.service.TransactionService;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -93,14 +94,6 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public void deleteTransaction(Long userId, Long id) {
-        Transaction txn = transactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
-        checkUserOwnership(userId, txn.getBankAccount());
-        transactionRepository.delete(txn);
-    }
-
-    @Override
     public UserCorrectionResponse addCorrection(Long userId, Long transactionId, UserCorrectionRequest request) {
         Transaction txn = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found"));
@@ -162,4 +155,62 @@ public class TransactionServiceImpl implements TransactionService {
                 .map(transactionMapper::toResponse)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional
+    public void deleteTransaction(Long userId, Long transactionId) {
+
+        Transaction transaction = transactionRepository
+                .findByIdAndBankAccount_User_Id(transactionId, userId)
+                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+
+        // Safe OneToOne handling
+        if (transaction.getCorrection() != null) {
+            transaction.getCorrection().setTransaction(null);
+        }
+
+        transactionRepository.delete(transaction);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAllTransactions(Long userId) {
+
+        List<Transaction> transactions = transactionRepository.findAllByBankAccount_User_Id(userId);
+
+        for (Transaction transaction : transactions) {
+            if (transaction.getCorrection() != null) {
+                transaction.getCorrection().setTransaction(null);
+            }
+        }
+
+        transactionRepository.deleteAll(transactions);
+    }
+
+    public List<Transaction> getTransactionsByCategory(Long categoryId) {
+
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        return transactionRepository.findByCategory(category);
+    }
+
+    @Override
+    public List<TransactionResponse> getTransactionsByCategory(Long userId, Long categoryId) {
+
+        // ✅ Ownership check (important)
+        boolean categoryExists = categoryRepository
+                .existsByIdAndUser_Id(categoryId, userId);
+
+        if (!categoryExists) {
+            throw new RuntimeException("Category not found or unauthorized");
+        }
+
+        return transactionRepository
+                .findByCategory_IdAndBankAccount_User_Id(categoryId, userId)
+                .stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+    }
+
 }

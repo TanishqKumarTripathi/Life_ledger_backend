@@ -1,10 +1,10 @@
 package com.Life_ledger.service;
 
+import com.Life_ledger.Enum.GoalStatus;
 import com.Life_ledger.dto.goals.GoalRequest;
 import com.Life_ledger.dto.goals.GoalResponse;
 import com.Life_ledger.entity.Goal;
 import com.Life_ledger.entity.User;
-import com.Life_ledger.enums.GoalStatus;
 import com.Life_ledger.exception.AppException;
 import com.Life_ledger.mapper.GoalMapper;
 import com.Life_ledger.repository.GoalRepository;

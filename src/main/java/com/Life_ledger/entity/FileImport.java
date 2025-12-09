@@ -2,7 +2,6 @@ package com.Life_ledger.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.Getter;
 
 import java.time.Instant;
 

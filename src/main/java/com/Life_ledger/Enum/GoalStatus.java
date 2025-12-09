@@ -1,4 +1,4 @@
-package com.Life_ledger.enums;
+package com.Life_ledger.Enum;
 
 public enum GoalStatus {
     ACTIVE("Active"),

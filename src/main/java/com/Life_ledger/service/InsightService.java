@@ -11,7 +11,6 @@ public interface InsightService {
 
     Insight getInsight(Long id);
 
-    // 🚀 IMPORTANT — now bank-account–based
     List<Insight> getInsightsByBankAccountId(Long accountId);
 
     Insight updateInsight(Long id, String aiText);

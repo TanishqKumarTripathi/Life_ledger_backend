@@ -1,5 +1,6 @@
 package com.Life_ledger.service;
 
+import com.Life_ledger.Enum.CategorySource;
 import com.Life_ledger.entity.*;
 import com.Life_ledger.repository.*;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -37,6 +38,14 @@ public class GeminiServiceImpl implements GeminiService {
     private final SubCategoryRepository subCategoryRepository;
     private final RecurringPatternRepository recurringPatternRepository;
     private final AnomalyRecordRepository anomalyRecordRepository;
+    private final RestTemplate geminiRestTemplate;
+    private final BankAccountRepository bankAccountRepository;
+
+    // Constants
+    private static final int MAX_CATEGORIZATION_TXNS = 100;
+    private static final int MAX_RECURRING_TXNS = 90;
+    private static final int MAX_ANOMALY_TXNS = 120;
+    private static final int MAX_SUMMARY_TXNS = 200;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -51,7 +60,6 @@ public class GeminiServiceImpl implements GeminiService {
     @Value("${gemini.api.readTimeout:120000}")
     private int readTimeoutMs;
 
-    // status store keyed by "userId:accountId|all"
     private final Map<String, EnumMap<Step, TaskStatus>> statusStore = new ConcurrentHashMap<>();
 
     public enum Step {
@@ -69,9 +77,6 @@ public class GeminiServiceImpl implements GeminiService {
         public volatile LocalDateTime updatedAt = LocalDateTime.now();
     }
 
-    // --------------------
-    // Interface implementations
-    // --------------------
     @Override
     public String testModel() {
         return "gemini-pro (v1beta) test OK";
@@ -96,14 +101,12 @@ public class GeminiServiceImpl implements GeminiService {
         for (Step s : Step.values())
             setStatusForKey(key, s, TaskStatus.State.PENDING, null, null);
 
-        // Run categorize first (so categories can be saved early)
         try {
             processCategorization(userId, accountId);
         } catch (Exception e) {
             log.error("Categorize failed for {}: {}", key, e.getMessage(), e);
         }
 
-        // run others in parallel
         processRecurringAsync(userId, accountId);
         processAnomaliesAsync(userId, accountId);
         processSummaryAsync(userId, accountId);
@@ -118,16 +121,26 @@ public class GeminiServiceImpl implements GeminiService {
         String key = statusKey(userId, accountId);
         setStatusForKey(key, Step.CATEGORIZE, TaskStatus.State.RUNNING, null, null);
         try {
-            List<Transaction> txns = loadTransactions(userId, accountId);
             List<Rule> rules = ruleRepository.findByUser_IdOrderByPriorityAsc(userId);
+            List<Transaction> allTxns = loadTransactions(userId, accountId);
 
-            String prompt = buildCategorizationPrompt(txns, rules);
+            List<Transaction> aiCandidates = filterForAiCategorization(allTxns)
+                    .stream()
+                    .sorted(Comparator.comparing(Transaction::getDate).reversed())
+                    .limit(MAX_CATEGORIZATION_TXNS)
+                    .toList();
+
+            if (aiCandidates.isEmpty()) {
+                log.info("Skipping AI categorization — nothing to process");
+                setStatusForKey(key, Step.CATEGORIZE, TaskStatus.State.DONE, "No UNSET txns", null);
+                return;
+            }
+
+            String prompt = buildCategorizationPrompt(aiCandidates, rules);
             JsonNode res = callGeminiWithRetry(prompt);
 
-            if (res != null) {
-                // Save categories (and category totals if provided)
+            if (res != null)
                 saveCategorizedResults(userId, res);
-            }
 
             setStatusForKey(key, Step.CATEGORIZE, TaskStatus.State.DONE, null, res);
             log.info("Categorization DONE for {}", key);
@@ -147,12 +160,22 @@ public class GeminiServiceImpl implements GeminiService {
         String key = statusKey(userId, accountId);
         setStatusForKey(key, Step.RECURRING, TaskStatus.State.RUNNING, null, null);
         try {
-            List<Transaction> txns = loadTransactions(userId, accountId);
+            List<Transaction> txns = loadTransactions(userId, accountId)
+                    .stream()
+                    .sorted(Comparator.comparing(Transaction::getDate).reversed())
+                    .limit(MAX_RECURRING_TXNS)
+                    .toList();
+
+            if (txns.size() < 10) {
+                log.info("Skipping recurring – insufficient data");
+                return;
+            }
+
             String prompt = buildRecurringPrompt(txns);
             JsonNode res = callGeminiWithRetry(prompt);
 
-            if (res != null)
-                saveRecurringResults(userId, res);
+            if (res != null && accountId != null)
+                saveRecurringResults(userId, accountId, res);
 
             setStatusForKey(key, Step.RECURRING, TaskStatus.State.DONE, null, res);
             log.info("Recurring DONE for {}", key);
@@ -172,7 +195,17 @@ public class GeminiServiceImpl implements GeminiService {
         String key = statusKey(userId, accountId);
         setStatusForKey(key, Step.ANOMALIES, TaskStatus.State.RUNNING, null, null);
         try {
-            List<Transaction> txns = loadTransactions(userId, accountId);
+            List<Transaction> txns = loadTransactions(userId, accountId)
+                    .stream()
+                    .filter(t -> t.getCategorySource() != null)
+                    .limit(MAX_ANOMALY_TXNS)
+                    .toList();
+
+            if (txns.size() < 15) {
+                log.info("Skipping anomalies – insufficient data");
+                return;
+            }
+
             String prompt = buildAnomaliesPrompt(txns);
             JsonNode res = callGeminiWithRetry(prompt);
 
@@ -196,14 +229,24 @@ public class GeminiServiceImpl implements GeminiService {
         String key = statusKey(userId, accountId);
         setStatusForKey(key, Step.SUMMARY, TaskStatus.State.RUNNING, null, null);
         try {
-            List<Transaction> txns = loadTransactions(userId, accountId);
+            List<Transaction> txns = loadTransactions(userId, accountId)
+                    .stream()
+                    .filter(t -> t.getCategorySource() != null)
+                    .limit(MAX_SUMMARY_TXNS)
+                    .toList();
+
+            if (txns.isEmpty()) {
+                log.info("Skipping summary – no categorized txns");
+                return;
+            }
+
             List<Goal> goals = goalRepository.findByUser_Id(userId);
 
             String prompt = buildSummaryPrompt(txns, goals);
             JsonNode res = callGeminiWithRetry(prompt);
 
             if (res != null)
-                saveSummaryResults(userId, res);
+                saveSummaryResults(accountId, res);
             setStatusForKey(key, Step.SUMMARY, TaskStatus.State.DONE, null, res);
             log.info("Summary DONE for {}", key);
         } catch (Exception ex) {
@@ -254,7 +297,8 @@ public class GeminiServiceImpl implements GeminiService {
     private List<Transaction> loadTransactions(Long userId, Long accountId) {
         if (accountId != null) {
             // ensure repository implements this
-            return transactionRepository.findAllByBankAccountId(accountId);
+            return transactionRepository.findAllByBankAccount_IdAndUser_Id(accountId, userId);
+
         } else {
             return transactionRepository.findAllByUserId(userId);
         }
@@ -273,11 +317,8 @@ public class GeminiServiceImpl implements GeminiService {
             } catch (Exception ex) {
                 lastEx = ex;
                 String m = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
-                if ((m.contains("503") || m.contains("timed out") || m.contains("unavailable") || m.contains("429"))
-                        && attempt < maxRetries) {
-                    log.warn("Gemini busy (attempt {}), backing off {}ms: {}", attempt, backoff, m);
+                if (m.contains("429") || m.contains("503")) {
                     Thread.sleep(backoff);
-                    backoff *= 2;
                     continue;
                 } else
                     throw ex;
@@ -299,9 +340,10 @@ public class GeminiServiceImpl implements GeminiService {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(connectTimeoutMs);
         requestFactory.setReadTimeout(readTimeoutMs);
-        RestTemplate local = new RestTemplate(requestFactory);
 
-        ResponseEntity<String> resp = local.postForEntity(url, new HttpEntity<>(body, headers), String.class);
+        ResponseEntity<String> resp = geminiRestTemplate.postForEntity(url, new HttpEntity<>(body, headers),
+                String.class);
+
         if (resp == null || resp.getBody() == null)
             throw new RuntimeException("Empty response from Gemini");
 
@@ -369,7 +411,6 @@ public class GeminiServiceImpl implements GeminiService {
             m.put("date", t.getDate() != null ? t.getDate().toString() : null);
             m.put("amount", t.getAmount() != null ? t.getAmount().doubleValue() : 0.0);
             m.put("merchant", t.getMerchant() == null ? "" : t.getMerchant());
-            m.put("notes", t.getNotes() == null ? "" : t.getNotes());
             m.put("type", t.getTypeTransaction() != null ? t.getTypeTransaction().toString().toLowerCase() : "debit");
             return m;
         }).collect(Collectors.toList());
@@ -390,44 +431,78 @@ public class GeminiServiceImpl implements GeminiService {
         String rulesJson = objectMapper.writeValueAsString(compactRules);
 
         return """
-                You are LifeLedger's Categorization engine. Use the USER RULES first, then AI fallback.
-                Output STRICT JSON only with this shape:
-                {
-                  "categorized": [
-                    { "id": 0, "type": "debit|credit", "category":"string", "subCategory":"string","date":"string" }
-                  ],
-                  "categoryTotals": {
-                    "Food": { "total": 0.0, "subCategories": { "Dining": 0.0, "Groceries": 0.0 } },
-                    ...
-                  }
-                }
+                STRICT RULES:
+                - Output ONLY valid JSON
+                - No markdown
+                - No explanations
+                - No extra text
+                - Omit unknown fields
 
-                USER RULES:
-                """ + rulesJson + "\n\nTRANSACTIONS:\n" + txJson;
+                                You are LifeLedger's Categorization engine. Use the USER RULES first, then AI fallback.
+                                Output STRICT JSON only with this shape:
+                                {
+                                  "categorized": [
+                                    { "id": 0, "type": "debit|credit", "category":"string", "subCategory":"string","date":"string" }
+                                  ]
+                                }
+
+                                USER RULES:
+                                """
+                + rulesJson + "\n\nTRANSACTIONS:\n" + txJson;
     }
 
     private String buildRecurringPrompt(List<Transaction> txns) throws Exception {
+
         List<Map<String, Object>> compact = txns.stream().map(t -> {
             Map<String, Object> m = new HashMap<>();
-            m.put("merchant", t.getMerchant() == null ? "" : t.getMerchant());
+            m.put("merchant", t.getMerchant());
             m.put("amount", t.getAmount() != null ? t.getAmount().doubleValue() : 0.0);
             m.put("date", t.getDate() != null ? t.getDate().toString() : null);
-            m.put("notes", t.getNotes() == null ? "" : t.getNotes());
+            m.put("category", t.getCategory() != null ? t.getCategory().getName() : null);
             return m;
         }).collect(Collectors.toList());
 
         String txJson = objectMapper.writeValueAsString(compact);
 
         return """
-                You are LifeLedger's Recurring detection engine.
-                Detect subscriptions, EMIs, rent, monthly charges and output STRICT JSON:
+                STRICT RULES (MANDATORY):
+                - Recurring means CONTRACTUAL or SCHEDULED payments.
+                - Repetition ALONE is NOT recurring.
+                - Do NOT include shopping, groceries, medical, P2P UPI transfers.
+                - Do NOT include merchants with variable amounts.
+                - Only include payments that:
+                  ✅ have a fixed interval (monthly/weekly)
+                  ✅ have nearly fixed amount (±5%)
+                  ✅ are intentional commitments (subscriptions, EMIs, SIPs, rent, utilities, insurance)
+
+                INCLUDE EXAMPLES:
+                - Mobile recharge, broadband
+                - Mutual fund SIP
+                - EMI / loan repayment
+                - Bank interest credit
+                - Insurance premium
+                - Rent
+
+                EXCLUDE EXAMPLES:
+                - UPI to individuals
+                - Daily variable spends
+
+                OUTPUT REQUIREMENTS:
+                - Output ONLY valid JSON
+                - No markdown
+                - No explanations
+                - No extra text
+                - Deduplicate merchants
+                - Return at most ONE entry per merchant
+
+                OUTPUT FORMAT:
                 {
                   "recurring": [
                     {
-                      "merchant":"string",
-                      "frequency":"daily|weekly|monthly|yearly",
-                      "totalAmount":0.0,
-                      "nextDueDate":"YYYY-MM-DD"
+                      "merchant": "string",
+                      "amount": 0.0,
+                      "frequency": "weekly|monthly|yearly",
+                      "nextDueDate": "YYYY-MM-DD"
                     }
                   ]
                 }
@@ -443,22 +518,28 @@ public class GeminiServiceImpl implements GeminiService {
             m.put("merchant", t.getMerchant() == null ? "" : t.getMerchant());
             m.put("amount", t.getAmount() != null ? t.getAmount().doubleValue() : 0.0);
             m.put("date", t.getDate() != null ? t.getDate().toString() : null);
-            m.put("notes", t.getNotes() == null ? "" : t.getNotes());
             return m;
         }).collect(Collectors.toList());
 
         String txJson = objectMapper.writeValueAsString(compact);
 
         return """
-                You are LifeLedger's Anomaly detector.
-                Output STRICT JSON:
-                {
-                  "anomalies":[ { "id":0, "reason":"string" } ],
-                  "highFrequencyMerchants":[ { "merchant":"string", "count":0, "total":0.0 } ]
-                }
+                STRICT RULES:
+                - Output ONLY valid JSON
+                - No markdown
+                - No explanations
+                - No extra text
+                - Omit unknown fields
 
-                TRANSACTIONS:
-                """ + txJson;
+                                You are LifeLedger's Anomaly detector.
+                                Output STRICT JSON:
+                                {
+                                  "anomalies":[ { "id":0, "reason":"string" } ],
+                                  "highFrequencyMerchants":[ { "merchant":"string", "count":0, "total":0.0 } ]
+                                }
+
+                                TRANSACTIONS:
+                                """ + txJson;
     }
 
     private String buildSummaryPrompt(List<Transaction> txns, List<Goal> goals) throws Exception {
@@ -479,25 +560,25 @@ public class GeminiServiceImpl implements GeminiService {
         String goalsJson = objectMapper.writeValueAsString(goals == null ? Collections.emptyList() : goals);
 
         return """
-                You are LifeLedger's Financial Insights engine.
-                Produce strict JSON with these fields:
-                {
-                  "summary": { "text":"string", "tone":"positive|warning|negative|neutral", "emoji":"string", "color":"string" },
-                  "nudges":[ { "type":"string", "text":"string" } ],
-                  "spendingBreakdown":{
-                    "totalSpent":0.0,
-                    "totalIncome":0.0,
-                    "netCashflow":0.0,
-                    "burnRate":{"dailyAvg":0.0,"projectedMonthEnd":0.0},
-                    "byCategory": { "Food": { "total":0.0, "percentage":0.0, "subCategories": { "Dining":0.0 } } },
-                    "highFrequencyMerchants":[ { "merchant":"string","count":0,"total":0.0 } ],
-                    "weeklyTrends":[ { "week":"YYYY-W##", "total":0.0 } ],
-                    "monthlyTrends":[ { "month":"YYYY-MM", "total":0.0 } ]
-                  }
-                }
 
-                TRANSACTIONS:
-                """
+                STRICT RULES:
+                - Output ONLY valid JSON
+                - No markdown
+                - No explanations
+                - No extra text
+                - Omit unknown fields
+
+                                You are LifeLedger's Financial Insights engine.
+                                Give overall summary of the whole transection.
+                                Produce strict JSON with these fields:
+                                {
+                                  "summary": { "text":"string", "tone":"positive|warning|negative|neutral", "emoji":"string", "color":"string" },
+                                  "nudges":[ { "type":"string", "text":"string" } ]
+                                  }
+                                }
+
+                                TRANSACTIONS:
+                                """
                 + txJson + "\nGOALS:\n" + goalsJson;
     }
 
@@ -560,10 +641,20 @@ public class GeminiServiceImpl implements GeminiService {
                     }
                 }
 
-                if (category != null)
+                CategorySource source = txn.getCategorySource();
+
+                boolean canAiOverwrite = source == null ||
+                        source == CategorySource.UNSET;
+
+                if (canAiOverwrite && category != null) {
                     txn.setCategory(category);
-                if (sub != null)
+                    txn.setCategorySource(CategorySource.AI);
+                }
+
+                if (canAiOverwrite && sub != null) {
                     txn.setSubCategory(sub);
+                }
+
                 if (type != null && !type.isBlank()) {
                     try {
                         txn.setTypeTransaction(com.Life_ledger.Enum.TransactionEnum.valueOf(type.toUpperCase()));
@@ -591,19 +682,44 @@ public class GeminiServiceImpl implements GeminiService {
     }
 
     @Transactional
-    protected void saveRecurringResults(Long userId, JsonNode recurringJson) {
+    protected void saveRecurringResults(
+            Long userId,
+            Long bankAccountId,
+            JsonNode recurringJson) {
+
         try {
-            if (recurringJson == null || !recurringJson.has("recurring"))
+            if (recurringJson == null || !recurringJson.has("recurring")) {
                 return;
+            }
+
+            BankAccount bankAccount = bankAccountRepository.findById(bankAccountId)
+                    .orElseThrow(() -> new RuntimeException("Bank account not found"));
+
+            if (!bankAccount.getUser().getId().equals(userId)) {
+                throw new RuntimeException("Unauthorized bank account access");
+            }
+
             List<RecurringPattern> list = new ArrayList<>();
+
             for (JsonNode item : recurringJson.path("recurring")) {
+
                 if (item == null || !item.isObject())
                     continue;
+
                 String merchant = item.path("merchant").asText("").trim();
                 if (merchant.isBlank())
                     continue;
+
+                boolean exists = recurringPatternRepository
+                        .existsByBankAccount_IdAndMerchantIgnoreCase(bankAccountId, merchant);
+
+                if (exists) {
+                    log.info("Skipping duplicate recurring merchant={} account={}", merchant, bankAccountId);
+                    continue;
+                }
+
                 String frequency = item.path("frequency").asText("monthly").trim();
-                double amt = item.path("totalAmount").asDouble(0.0);
+                double amt = item.path("amount").asDouble(0.0);
                 String next = item.path("nextDueDate").asText(null);
 
                 RecurringPattern rp = RecurringPattern.builder()
@@ -611,19 +727,28 @@ public class GeminiServiceImpl implements GeminiService {
                         .frequency(frequency)
                         .amount(BigDecimal.valueOf(amt))
                         .reason(null)
+                        .bankAccount(bankAccount)
                         .build();
+
                 if (next != null && !next.isBlank()) {
                     try {
                         rp.setNextDueDate(LocalDate.parse(next));
                     } catch (Exception ignored) {
                     }
                 }
+
                 list.add(rp);
             }
+
             if (!list.isEmpty()) {
                 recurringPatternRepository.saveAll(list);
-                log.info("Saved {} recurring patterns for user={}", list.size(), userId);
+                log.info(
+                        "Saved {} recurring patterns for user={} account={}",
+                        list.size(),
+                        userId,
+                        bankAccountId);
             }
+
         } catch (Exception e) {
             log.error("Failed saving recurring results: {}", e.getMessage(), e);
         }
@@ -655,7 +780,7 @@ public class GeminiServiceImpl implements GeminiService {
 
                 AnomalyRecord record = AnomalyRecord.builder()
                         .transaction(txn)
-                        .bankAccount(txn.getBankAccount()) // 🔥 FIXED
+                        .bankAccount(txn.getBankAccount())
                         .reason(reason)
                         .confidence(confidence)
                         .anomalyType("AI")
@@ -696,4 +821,13 @@ public class GeminiServiceImpl implements GeminiService {
             log.error("Failed saving summary results: {}", e.getMessage(), e);
         }
     }
+
+    // ✅ AI fallback ONLY for uncategorized transactions
+    private List<Transaction> filterForAiCategorization(List<Transaction> txns) {
+        return txns.stream()
+                .filter(t -> t.getCategorySource() == null ||
+                        t.getCategorySource() == CategorySource.UNSET)
+                .collect(Collectors.toList());
+    }
+
 }

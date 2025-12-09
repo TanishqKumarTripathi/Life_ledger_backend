@@ -1,6 +1,5 @@
 package com.Life_ledger.dto.goals;
 
-import com.Life_ledger.enums.GoalType;
 import lombok.Data;
 
 import java.math.BigDecimal;

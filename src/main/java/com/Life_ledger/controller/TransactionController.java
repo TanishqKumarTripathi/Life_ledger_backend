@@ -77,6 +77,15 @@ public class TransactionController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/delete-all")
+    public ResponseEntity<Void> deleteAllTransactions(
+            @RequestHeader("Authorization") String token) {
+
+        User user = getUserFromToken(token);
+        transactionService.deleteAllTransactions(user.getId());
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{id}/correction")
     public ResponseEntity<UserCorrectionResponse> addCorrection(
             @RequestHeader("Authorization") String token,
@@ -111,4 +120,16 @@ public class TransactionController {
         User user = getUserFromToken(token);
         return ResponseEntity.ok(transactionService.getAnomalyTransactions(user.getId()));
     }
+
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<List<TransactionResponse>> getByCategory(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long categoryId) {
+
+        User user = getUserFromToken(token);
+
+        return ResponseEntity.ok(
+                transactionService.getTransactionsByCategory(user.getId(), categoryId));
+    }
+
 }

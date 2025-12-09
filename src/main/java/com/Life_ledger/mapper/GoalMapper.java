@@ -5,11 +5,11 @@ import java.time.LocalDate;
 
 import org.springframework.stereotype.Component;
 
+import com.Life_ledger.Enum.GoalStatus;
 import com.Life_ledger.dto.goals.GoalRequest;
 import com.Life_ledger.dto.goals.GoalResponse;
 import com.Life_ledger.entity.Goal;
-import com.Life_ledger.enums.GoalStatus;
-import com.Life_ledger.enums.GoalType;
+import com.Life_ledger.Enum.GoalType;
 
 @Component
 public class GoalMapper {

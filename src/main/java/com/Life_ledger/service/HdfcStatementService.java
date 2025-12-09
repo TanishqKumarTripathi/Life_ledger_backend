@@ -8,12 +8,15 @@ import java.util.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.Life_ledger.Enum.CategorySource;
 import com.Life_ledger.Enum.TransactionEnum;
 import com.Life_ledger.entity.BankAccount;
+import com.Life_ledger.entity.Category;
 import com.Life_ledger.entity.Transaction;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.TransactionRepository;
+import com.Life_ledger.util.TransactionFingerprintUtil;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,10 +29,9 @@ public class HdfcStatementService {
     private final HdfcStatementParser hdfcParser;
     private final BankAccountRepository bankRepo;
     private final TransactionRepository transactionRepo;
+    private final TransactionFingerprintUtil fingerprintUtil;
+    private final RuleBasedCategoryService ruleBasedCategoryService;
 
-    // =====================================================================
-    // MAIN ENTRY POINT
-    // =====================================================================
     public Map<String, Object> parseFile(MultipartFile file, User user) {
 
         Map<String, Object> response = new HashMap<>();
@@ -38,10 +40,6 @@ public class HdfcStatementService {
         boolean isCsv = name.endsWith(".csv");
 
         try {
-
-            // -----------------------------------------------------
-            // 1️⃣ Detect File Type + Read Content
-            // -----------------------------------------------------
             String extractedText;
 
             if (name.endsWith(".pdf")) {
@@ -59,10 +57,6 @@ public class HdfcStatementService {
                         "status", "error",
                         "message", "Unsupported file type");
             }
-
-            // -----------------------------------------------------
-            // 2️⃣ Parse HDFC Statement
-            // -----------------------------------------------------
             Map<String, Object> parsed = hdfcParser.parse(extractedText, isCsv);
             String accountNumber = parsed.get("accountNumber").toString();
             List<Map<String, Object>> txns = (List<Map<String, Object>>) parsed.get("transactions");
@@ -73,9 +67,6 @@ public class HdfcStatementService {
                         "message", "Unable to extract account number from the statement");
             }
 
-            // -----------------------------------------------------
-            // 3️⃣ BANK ACCOUNT HANDLING
-            // -----------------------------------------------------
             BankAccount bankAccount = bankRepo
                     .findFirstByEncryptedAccountNumberAndUserId(accountNumber, user.getId())
                     .orElse(null);
@@ -93,14 +84,11 @@ public class HdfcStatementService {
                 bankRepo.save(bankAccount);
                 newAccount = true;
 
-                System.out.println("🔥 New account detected! Added: " + accountNumber);
+                System.out.println("New account detected! Added: " + accountNumber);
             } else {
-                System.out.println("🔗 Existing account linked: " + accountNumber);
+                System.out.println("Existing account linked: " + accountNumber);
             }
 
-            // -----------------------------------------------------
-            // 4️⃣ SAVE TRANSACTIONS (Added + Skipped Tracking)
-            // -----------------------------------------------------
             int savedCount = 0;
 
             List<Map<String, Object>> added = new ArrayList<>();
@@ -108,33 +96,33 @@ public class HdfcStatementService {
 
             for (Map<String, Object> t : txns) {
                 try {
-                    // Normalize reference
                     String reference = (String) t.getOrDefault("reference", "");
                     if (reference == null || reference.isBlank()) {
                         reference = "AUTO-" + UUID.randomUUID();
                     }
 
-                    // Duplicate prevention
-                    // -----------------------------------------------------
-                    // NORMALIZE DESCRIPTION
-                    // -----------------------------------------------------
                     String rawDescription = (String) t.getOrDefault("description", "");
-                    String normalizedDesc = rawDescription.trim().toLowerCase().replaceAll("\\s+", " ");
 
-                    // -----------------------------------------------------
-                    // CREATE FINGERPRINT (UNIQUE TRANSACTION ID)
-                    // -----------------------------------------------------
-                    String fingerprint = t.get("date") + "|"
-                            + t.get("amount") + "|"
-                            + t.get("type") + "|"
-                            + normalizedDesc + "|"
-                            + reference + "|"
-                            + bankAccount.getId();
+                    // 1️⃣ Parse date & amount first
+                    LocalDate date = LocalDate.parse(t.get("date").toString());
+                    BigDecimal amount = new BigDecimal(t.get("amount").toString());
 
-                    // -----------------------------------------------------
-                    // DUPLICATE CHECK
-                    // -----------------------------------------------------
-                    boolean exists = transactionRepo.existsByFingerprintAndBankAccountId(fingerprint,
+                    // 2️⃣ Decide transaction type BEFORE we use it
+                    String typeStr = t.getOrDefault("type", "DEBIT").toString().toUpperCase();
+                    TransactionEnum txnType = typeStr.equals("CREDIT")
+                            ? TransactionEnum.CREDIT
+                            : TransactionEnum.DEBIT;
+
+                    // 3️⃣ Build fingerprint using shared util
+                    String fingerprint = fingerprintUtil.build(
+                            date,
+                            amount,
+                            txnType,
+                            rawDescription,
+                            bankAccount.getId());
+
+                    boolean exists = transactionRepo.existsByFingerprintAndBankAccountId(
+                            fingerprint,
                             bankAccount.getId());
 
                     if (exists) {
@@ -143,21 +131,22 @@ public class HdfcStatementService {
                         continue;
                     }
 
-                    // Transaction type
-                    String typeStr = t.getOrDefault("type", "DEBIT").toString().toUpperCase();
-                    TransactionEnum txnType = typeStr.equals("CREDIT")
-                            ? TransactionEnum.CREDIT
-                            : TransactionEnum.DEBIT;
+                    // 4️⃣ Build & save transaction
+                    Optional<Category> categoryOpt = ruleBasedCategoryService.categorize(rawDescription, user);
 
-                    // Build & save transaction
                     Transaction txn = Transaction.builder()
                             .merchant(rawDescription)
                             .reference(reference)
                             .fingerprint(fingerprint)
-                            .amount(new BigDecimal(t.get("amount").toString()))
+                            .amount(amount)
                             .typeTransaction(txnType)
-                            .date(LocalDate.parse(t.get("date").toString()))
+                            .date(date)
                             .notes(rawDescription)
+                            .category(categoryOpt.orElse(null))
+                            .categorySource(
+                                    categoryOpt.isPresent()
+                                            ? CategorySource.RULE
+                                            : CategorySource.UNSET)
                             .anomaly(false)
                             .recurring(false)
                             .bankAccount(bankAccount)
@@ -176,9 +165,6 @@ public class HdfcStatementService {
                 }
             }
 
-            // -----------------------------------------------------
-            // 5️⃣ FINAL RESPONSE
-            // -----------------------------------------------------
             response.put("status", "success");
             response.put("message", "File parsed successfully");
             response.put("accountNumber", accountNumber);
