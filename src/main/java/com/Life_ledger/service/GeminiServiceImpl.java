@@ -2,7 +2,6 @@ package com.Life_ledger.service;
 
 import com.Life_ledger.entity.*;
 import com.Life_ledger.repository.*;
-import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -39,9 +37,7 @@ public class GeminiServiceImpl implements GeminiService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
-    // ========================================================================================
     // MAIN ENTRY
-    // ========================================================================================
     @Override
     public Object analyzeUserTransactions(Long userId) {
         Map<String, Object> resp = new HashMap<>();
