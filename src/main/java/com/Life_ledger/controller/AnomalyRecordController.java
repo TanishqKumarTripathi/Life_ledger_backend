@@ -1,5 +1,6 @@
 package com.Life_ledger.controller;
 
+import com.Life_ledger.dto.anomaly.AnomalyResponse;
 import com.Life_ledger.entity.AnomalyRecord;
 import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.User;
@@ -18,7 +19,6 @@ import java.util.*;
 @RequestMapping("/api/anomalies")
 @RequiredArgsConstructor
 public class AnomalyRecordController {
-
     private final AnomalyRecordService anomalyService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
@@ -67,10 +67,14 @@ public class AnomalyRecordController {
                 anomalies = anomalyService.getAnomaliesByBankAccount(accountId);
             }
 
+            List<AnomalyResponse> responses = anomalies.stream()
+                    .map(this::toResponse)
+                    .toList();
+
             return ResponseEntity.ok(Map.of(
                     "status", "success",
-                    "count", anomalies.size(),
-                    "anomalies", anomalies));
+                    "count", responses.size(),
+                    "anomalies", responses));
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -91,10 +95,14 @@ public class AnomalyRecordController {
 
             List<AnomalyRecord> anomalies = anomalyService.getAnomaliesByBankAccount(accountId);
 
+            List<AnomalyResponse> responses = anomalies.stream()
+                    .map(this::toResponse)
+                    .toList();
+
             return ResponseEntity.ok(Map.of(
                     "status", "success",
-                    "count", anomalies.size(),
-                    "anomalies", anomalies));
+                    "count", responses.size(),
+                    "anomalies", responses));
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -118,7 +126,7 @@ public class AnomalyRecordController {
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
-                    "anomaly", anomaly));
+                    "anomaly", toResponse(anomaly)));
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -177,12 +185,26 @@ public class AnomalyRecordController {
             return ResponseEntity.ok(Map.of(
                     "status", "success",
                     "message", "Anomaly updated",
-                    "anomaly", updated));
+                    "anomaly", toResponse(updated)));
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "status", "error",
                     "message", e.getMessage()));
         }
+    }
+
+    private AnomalyResponse toResponse(AnomalyRecord anomaly) {
+        AnomalyResponse response = new AnomalyResponse();
+        response.setId(anomaly.getId());
+        response.setTransactionId(anomaly.getTransaction().getId());
+        response.setMerchant(anomaly.getTransaction().getMerchant());
+        response.setAmount(anomaly.getTransaction().getAmount());
+        response.setTransactionDate(anomaly.getTransaction().getDate());
+        response.setReason(anomaly.getReason());
+        response.setAnomalyType(anomaly.getAnomalyType());
+        response.setConfidence(anomaly.getConfidence());
+        response.setCreatedAt(anomaly.getCreatedAt());
+        return response;
     }
 }

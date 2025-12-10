@@ -57,14 +57,9 @@ public class CategoryController {
 
     @GetMapping
     public ResponseEntity<List<CategoryResponse>> getAllCategories(
-            @RequestHeader("Authorization") String token,
-            @RequestParam(required = false) Long accountId) {
-
+            @RequestHeader("Authorization") String token) {
         User user = getUserFromToken(token);
-        List<CategoryResponse> categories = accountId != null 
-            ? categoryService.getCategoriesByAccount(accountId)
-            : categoryService.getAllCategories(user.getId());
-        return ResponseEntity.ok(categories);
+        return ResponseEntity.ok(categoryService.getAllCategories(user.getId()));
     }
 
     @PutMapping("/{id}")

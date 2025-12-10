@@ -2,8 +2,10 @@ package com.Life_ledger.controller;
 
 import com.Life_ledger.dto.insight.InsightRequestDTO;
 import com.Life_ledger.dto.insight.InsightResponseDTO;
+import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.Insight;
 import com.Life_ledger.entity.User;
+import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
 import com.Life_ledger.service.InsightService;
@@ -22,6 +24,7 @@ public class InsightController {
     private final InsightService insightService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final BankAccountRepository bankAccountRepository;
 
     private User getUserFromToken(String header) {
         if (header == null || !header.startsWith("Bearer ")) {
@@ -219,6 +222,29 @@ public class InsightController {
                     "message", ex.getMessage()
             ));
         }
+    }
+
+    @GetMapping("/account/{accountId}")
+    public ResponseEntity<?> getInsightsByAccount(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Long accountId) {
+        // :one: Extract user
+        User user = getUserFromToken(authorization);
+        // :two: Validate ownership
+        BankAccount account = bankAccountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Bank account not found"));
+        if (!account.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "status", "error",
+                    "message", "Access denied"));
+        }
+        // :three: Call service (transaction is already open there)
+        List<InsightResponseDTO> insights = insightService.getInsightsByAccount(accountId);
+        // :four: Return clean JSON
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "count", insights.size(),
+                "insights", insights));
     }
 
 }

@@ -254,4 +254,20 @@ public class InsightServiceImpl implements InsightService {
             anomaliesNode.has("summary") ? anomaliesNode.get("summary").asText() : "Anomaly detection analysis"
         );
     }
+
+    @Transactional(readOnly = true) // :white_tick: REQUIRED
+    @Override
+    public List<InsightResponseDTO> getInsightsByAccount(Long accountId) {
+        return insightRepository.findByBankAccount_Id(accountId)
+                .stream()
+                .map(insight -> {
+                    InsightResponseDTO dto = new InsightResponseDTO();
+                    dto.setId(insight.getId());
+                    // :white_tick: LOB accessed while session is OPEN
+                    dto.setAiText(insight.getAiText());
+                    dto.setCreatedAt(insight.getCreatedAt());
+                    return dto;
+                })
+                .toList();
+    }
 }

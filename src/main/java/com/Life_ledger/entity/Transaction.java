@@ -4,15 +4,13 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import com.Life_ledger.Enum.CategorySource;
 import com.Life_ledger.Enum.TransactionEnum;
 
 @Entity
-// @Table(name = "transactions")
-// @Table(name = "transactions")
 @Table(name = "transactions", uniqueConstraints = @UniqueConstraint(columnNames = { "fingerprint", "bank_account_id" }))
-
 @Getter
 @Setter
 @NoArgsConstructor
@@ -25,10 +23,7 @@ public class Transaction {
     private Long id;
 
     private String merchant;
-
-    // @Column(unique = true)
     private String reference;
-
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
@@ -38,11 +33,8 @@ public class Transaction {
     private CategorySource categorySource;
 
     private LocalDate date;
-
     private String notes;
-
     private boolean recurring;
-
     private boolean anomaly;
 
     @Column(name = "fingerprint", nullable = false, length = 500, unique = true)
@@ -64,6 +56,9 @@ public class Transaction {
     @JoinColumn(name = "sub_category_id")
     private SubCategory subCategory;
 
-    @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
     private UserCorrection correction;
+
+    @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<AnomalyRecord> anomalyRecords;
 }

@@ -17,4 +17,6 @@ public interface InsightRepository extends JpaRepository<Insight, Long> {
     
     Optional<Insight> findTopByBankAccountIdOrderByCreatedAtDesc(Long accountId);
 
+    List<Insight> findByBankAccount_Id(Long bankAccountId);
+
 }

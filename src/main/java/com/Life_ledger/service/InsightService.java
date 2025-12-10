@@ -29,4 +29,6 @@ public interface InsightService {
     boolean hasRecentAnalysis(Long userId, int hours);
     boolean hasRecentAnalysisByAccount(Long accountId, int hours);
     Insight getLatestInsightByAccount(Long accountId);
+
+    List<InsightResponseDTO> getInsightsByAccount(Long accountId);
 }

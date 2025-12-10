@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
@@ -38,7 +39,10 @@ public class GeminiServiceImpl implements GeminiService {
     private final SubCategoryRepository subCategoryRepository;
     private final RecurringPatternRepository recurringPatternRepository;
     private final AnomalyRecordRepository anomalyRecordRepository;
+
+    @Qualifier("geminiRestTemplate")
     private final RestTemplate geminiRestTemplate;
+
     private final BankAccountRepository bankAccountRepository;
 
     // Constants
@@ -451,14 +455,8 @@ public class GeminiServiceImpl implements GeminiService {
                                 {
                                   "categorized": [
                                     { "id": 0, "type": "debit|credit", "category":"string", "subCategory":"string","date":"string" }
-                                  ],
-                                  "categoryTotals": {
-                                    "Food": { "total": 0.0, "subCategories": { "Dining": 0.0, "Groceries": 0.0 } },
-                                    ...
-                                  }
+                                  ]
                                 }
-
-                                USER RULES:
                                 """
                 + rulesJson + "\n\nTRANSACTIONS:\n" + txJson;
     }

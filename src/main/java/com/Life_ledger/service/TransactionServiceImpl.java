@@ -10,7 +10,7 @@ import com.Life_ledger.mapper.TransactionMapper;
 import com.Life_ledger.repository.*;
 import com.Life_ledger.service.TransactionService;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +25,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final BankAccountRepository bankAccountRepository;
     private final CategoryRepository categoryRepository;
     private final UserCorrectionRepository userCorrectionRepository;
+    private final AnomalyRecordRepository anomalyRecordRepository;
     private final TransactionMapper transactionMapper;
 
     private void checkUserOwnership(Long userId, BankAccount account) {
@@ -96,10 +97,15 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
     public void deleteTransaction(Long userId, Long id) {
         Transaction txn = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Transaction not found"));
         checkUserOwnership(userId, txn.getBankAccount());
+        
+        // Delete related anomaly records first
+        anomalyRecordRepository.deleteByTransactionId(id);
+        
         transactionRepository.delete(txn);
     }
 
@@ -185,15 +191,17 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public void deleteAllTransactions(Long userId) {
-
         List<Transaction> transactions = transactionRepository.findAllByBankAccount_User_Id(userId);
-
-        for (Transaction transaction : transactions) {
-            if (transaction.getCorrection() != null) {
-                transaction.getCorrection().setTransaction(null);
-            }
+        
+        // Delete all anomaly records for these transactions
+        List<Long> transactionIds = transactions.stream()
+                .map(Transaction::getId)
+                .collect(Collectors.toList());
+        
+        if (!transactionIds.isEmpty()) {
+            anomalyRecordRepository.deleteByTransactionIdIn(transactionIds);
         }
-
+        
         transactionRepository.deleteAll(transactions);
     }
 
