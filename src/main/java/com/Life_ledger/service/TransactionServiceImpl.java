@@ -7,6 +7,7 @@ import com.Life_ledger.entity.*;
 import com.Life_ledger.mapper.TransactionMapper;
 import com.Life_ledger.repository.*;
 import com.Life_ledger.service.TransactionService;
+import org.springframework.data.domain.Sort;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -164,7 +165,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .findByIdAndBankAccount_User_Id(transactionId, userId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found"));
 
-        // Safe OneToOne handling
+        // ✅ correction already handled
         if (transaction.getCorrection() != null) {
             transaction.getCorrection().setTransaction(null);
         }
@@ -208,6 +209,33 @@ public class TransactionServiceImpl implements TransactionService {
 
         return transactionRepository
                 .findByCategory_IdAndBankAccount_User_Id(categoryId, userId)
+                .stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<TransactionResponse> getTransactionsByMonth(Long userId, int month, int year) {
+
+        return transactionRepository
+                .findByUserAndMonth(userId, month, year)
+                .stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<TransactionResponse> sortTransactions(
+            Long userId,
+            String sortBy,
+            String direction) {
+
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        return transactionRepository
+                .findByBankAccount_User_Id(userId, sort)
                 .stream()
                 .map(transactionMapper::toResponse)
                 .toList();

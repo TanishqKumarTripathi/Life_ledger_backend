@@ -23,6 +23,7 @@ public class AnomalyRecord {
     private Long id;
 
     @OneToOne
+    @JoinColumn(name = "transaction_id", nullable = false)
     private Transaction transaction;
 
     private String reason; // AI explanation

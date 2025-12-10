@@ -1,5 +1,6 @@
 package com.Life_ledger.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -9,10 +10,13 @@ import org.springframework.web.client.RestTemplate;
 public class GeminiHttpConfig {
 
     @Bean
-    public RestTemplate geminiRestTemplate() {
+    public RestTemplate geminiRestTemplate(
+            @Value("${gemini.api.connectTimeout:50000}") int connectTimeout,
+            @Value("${gemini.api.readTimeout:120000}") int readTimeout) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5_000);
-        factory.setReadTimeout(30_000);
+        factory.setConnectTimeout(connectTimeout);
+        factory.setReadTimeout(readTimeout);
         return new RestTemplate(factory);
     }
+
 }

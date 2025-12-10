@@ -1,6 +1,7 @@
 package com.Life_ledger.service;
 
 import com.Life_ledger.Enum.GoalStatus;
+import com.Life_ledger.Enum.GoalType;
 import com.Life_ledger.dto.goals.GoalRequest;
 import com.Life_ledger.dto.goals.GoalResponse;
 import com.Life_ledger.entity.Goal;
@@ -34,6 +35,9 @@ public class GoalServiceImpl implements GoalService {
 
         Goal goal = goalMapper.toEntity(req);
         goal.setUser(user);
+
+        normalizeDates(goal); // ✅ ADD THIS
+        updateGoalStatus(goal);
 
         Goal saved = goalRepository.save(goal);
         return GoalResponse.from(saved);
@@ -73,6 +77,8 @@ public class GoalServiceImpl implements GoalService {
         }
 
         goalMapper.updateGoalFromRequest(goal, req);
+
+        normalizeDates(goal); // ✅ ADD THIS
         updateGoalStatus(goal);
 
         Goal updated = goalRepository.save(goal);
@@ -124,11 +130,20 @@ public class GoalServiceImpl implements GoalService {
                 .divide(goal.getTargetAmount(), 4, RoundingMode.HALF_UP)
                 .doubleValue();
 
+        if (goal.getTargetAmount() == null ||
+                goal.getTargetAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            return Optional.empty();
+        }
+
         if (progress >= 1.0) {
             return Optional.of("🎉 Congratulations! Goal completed!");
         }
 
-        if (progress >= goal.getNudgeThreshold()) {
+        double threshold = goal.getNudgeThreshold() != null
+                ? goal.getNudgeThreshold()
+                : 0.7;
+
+        if (progress >= threshold) {
             return Optional.of("📈 You're " + Math.round(progress * 100) + "% there! Keep it up!");
         }
 
@@ -153,4 +168,22 @@ public class GoalServiceImpl implements GoalService {
             goal.setStatus(GoalStatus.ACTIVE);
         }
     }
+
+    private void normalizeDates(Goal goal) {
+
+        if (goal.getStartDate() == null) {
+            goal.setStartDate(LocalDate.now());
+        }
+
+        if ((goal.getType() == GoalType.SPENDINGCAP
+                || goal.getType() == GoalType.BUDGET)
+                && goal.getDeadline() == null) {
+
+            // ✅ Default: current month budget
+            goal.setDeadline(
+                    goal.getStartDate()
+                            .withDayOfMonth(goal.getStartDate().lengthOfMonth()));
+        }
+    }
+
 }

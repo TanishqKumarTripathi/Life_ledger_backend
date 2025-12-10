@@ -9,7 +9,6 @@ public interface AnomalyRecordService {
 
     AnomalyRecord getAnomaly(Long id);
 
-    // 🔥 REPLACED user-based method with account-based
     List<AnomalyRecord> getAnomaliesByBankAccount(Long bankAccountId);
 
     AnomalyRecord markResolved(Long id, boolean resolved, String comment);

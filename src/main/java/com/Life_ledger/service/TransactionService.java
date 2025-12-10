@@ -28,4 +28,12 @@ public interface TransactionService {
     List<TransactionResponse> getAnomalyTransactions(Long userId);
 
     List<TransactionResponse> getTransactionsByCategory(Long userId, Long categoryId);
+
+    List<TransactionResponse> getTransactionsByMonth(Long userId, int month, int year);
+
+    List<TransactionResponse> sortTransactions(
+            Long userId,
+            String sortBy,
+            String direction);
+
 }

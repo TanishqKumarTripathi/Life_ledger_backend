@@ -75,4 +75,25 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                         Long bankAccountId,
                         Long userId);
 
+        // Filter by user + month + year
+        @Query("""
+                            SELECT t FROM Transaction t
+                            WHERE t.bankAccount.user.id = :userId
+                            AND MONTH(t.date) = :month
+                            AND YEAR(t.date) = :year
+                            ORDER BY t.date DESC
+                        """)
+        List<Transaction> findByUserAndMonth(
+                        @Param("userId") Long userId,
+                        @Param("month") int month,
+                        @Param("year") int year);
+
+        // Filter + sort dynamically
+        List<Transaction> findByBankAccount_User_Id(Long userId, org.springframework.data.domain.Sort sort);
+
+        List<Transaction> findByBankAccount_User_IdAndDateBetween(
+                        Long userId,
+                        LocalDate from,
+                        LocalDate to);
+
 }

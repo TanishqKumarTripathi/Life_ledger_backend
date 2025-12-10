@@ -45,6 +45,9 @@ public class Transaction {
 
     private boolean anomaly;
 
+    @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
+    private AnomalyRecord anomalyRecord;
+
     @Column(name = "fingerprint", nullable = false, length = 500, unique = true)
     private String fingerprint;
 

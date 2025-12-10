@@ -22,42 +22,25 @@ public class GoalMapper {
                 .category(req.getCategory())
                 .startDate(LocalDate.now())
                 .deadline(req.getDeadline())
-                .type(GoalType.valueOf(req.getType().toUpperCase()))
+                .type(req.getType()) // ✅ FIX
                 .status(GoalStatus.ACTIVE)
-                .nudgeThreshold(req.getNudgeThreshold() != null ? req.getNudgeThreshold() : 0.8)
                 .build();
     }
 
     public void updateGoalFromRequest(Goal goal, GoalRequest req) {
         if (req.getName() != null)
             goal.setName(req.getName());
+
         if (req.getTargetAmount() != null)
             goal.setTargetAmount(req.getTargetAmount());
+
         if (req.getDeadline() != null)
             goal.setDeadline(req.getDeadline());
+
         if (req.getCategory() != null)
             goal.setCategory(req.getCategory());
-        if (req.getNudgeThreshold() != null)
-            goal.setNudgeThreshold(req.getNudgeThreshold());
+
         if (req.getType() != null)
-            goal.setType(GoalType.valueOf(req.getType().toUpperCase()));
-    }
-
-    public static GoalResponse toDto(Goal goal) {
-        if (goal == null)
-            return null;
-
-        return GoalResponse.builder()
-                .id(goal.getId())
-                .name(goal.getName())
-                .targetAmount(goal.getTargetAmount())
-                .currentAmount(goal.getCurrentAmount())
-                .startDate(goal.getStartDate())
-                .deadline(goal.getDeadline())
-                .type(goal.getType())
-                .status(goal.getStatus())
-                .category(goal.getCategory())
-                .nudgeThreshold(goal.getNudgeThreshold())
-                .build();
+            goal.setType(req.getType()); // ✅ FIX
     }
 }

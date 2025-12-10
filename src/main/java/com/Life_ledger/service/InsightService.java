@@ -21,4 +21,6 @@ public interface InsightService {
 
     // 🚀 DTO version — also bank-account–based
     List<InsightResponseDTO> getInsightsByBankAccountIdDTO(Long accountId);
+
+    List<InsightResponseDTO> getInsightsByAccount(Long accountId);
 }

@@ -115,30 +115,31 @@ public class InsightController {
     // ----------------------------------------------------
     // GET ALL INSIGHTS FOR A SPECIFIC BANK ACCOUNT
     // ----------------------------------------------------
-    @GetMapping("/account/{accountId}")
-    public ResponseEntity<?> getAllByAccount(
-            @RequestHeader("Authorization") String token,
-            @PathVariable Long accountId) {
+    // @GetMapping("/account/{accountId}")
+    // public ResponseEntity<?> getAllByAccount(
+    // @RequestHeader("Authorization") String token,
+    // @PathVariable Long accountId) {
 
-        try {
-            User user = getUserFromToken(token);
+    // try {
+    // User user = getUserFromToken(token);
 
-            // Validate ownership
-            validateAccountOwner(accountId, user.getId());
+    // // Validate ownership
+    // validateAccountOwner(accountId, user.getId());
 
-            List<InsightResponseDTO> insights = insightService.getInsightsByBankAccountIdDTO(accountId);
+    // List<InsightResponseDTO> insights =
+    // insightService.getInsightsByBankAccountIdDTO(accountId);
 
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "count", insights.size(),
-                    "insights", insights));
+    // return ResponseEntity.ok(Map.of(
+    // "status", "success",
+    // "count", insights.size(),
+    // "insights", insights));
 
-        } catch (Exception ex) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", ex.getMessage()));
-        }
-    }
+    // } catch (Exception ex) {
+    // return ResponseEntity.badRequest().body(Map.of(
+    // "status", "error",
+    // "message", ex.getMessage()));
+    // }
+    // }
 
     // ----------------------------------------------------
     // UPDATE insight
@@ -197,4 +198,33 @@ public class InsightController {
                     "message", ex.getMessage()));
         }
     }
+
+    @GetMapping("/account/{accountId}")
+    public ResponseEntity<?> getInsightsByAccount(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Long accountId) {
+
+        // 1️⃣ Extract user
+        User user = getUserFromToken(authorization);
+
+        // 2️⃣ Validate ownership
+        BankAccount account = bankAccountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Bank account not found"));
+
+        if (!account.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "status", "error",
+                    "message", "Access denied"));
+        }
+
+        // 3️⃣ Call service (transaction is already open there)
+        List<InsightResponseDTO> insights = insightService.getInsightsByAccount(accountId);
+
+        // 4️⃣ Return clean JSON
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "count", insights.size(),
+                "insights", insights));
+    }
+
 }

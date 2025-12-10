@@ -5,6 +5,7 @@ import com.Life_ledger.entity.Insight;
 import com.Life_ledger.repository.InsightRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -29,6 +30,7 @@ public class InsightServiceImpl implements InsightService {
     @Override
     public List<Insight> getInsightsByBankAccountId(Long accountId) {
         return insightRepository.findByBankAccount_Id(accountId);
+
     }
 
     @Override
@@ -57,6 +59,7 @@ public class InsightServiceImpl implements InsightService {
 
     // 🚀 NEW — bank-account–based DTO fetch
     @Override
+    @Transactional(readOnly = true)
     public List<InsightResponseDTO> getInsightsByBankAccountIdDTO(Long accountId) {
         return insightRepository.findByBankAccount_Id(accountId)
                 .stream()
@@ -64,6 +67,25 @@ public class InsightServiceImpl implements InsightService {
                     InsightResponseDTO dto = new InsightResponseDTO();
                     dto.setId(insight.getId());
                     dto.setAiText(insight.getAiText());
+                    dto.setCreatedAt(insight.getCreatedAt());
+                    return dto;
+                })
+                .toList();
+    }
+
+    @Transactional(readOnly = true) // ✅ REQUIRED
+    @Override
+    public List<InsightResponseDTO> getInsightsByAccount(Long accountId) {
+
+        return insightRepository.findByBankAccount_Id(accountId)
+                .stream()
+                .map(insight -> {
+                    InsightResponseDTO dto = new InsightResponseDTO();
+                    dto.setId(insight.getId());
+
+                    // ✅ LOB accessed while session is OPEN
+                    dto.setAiText(insight.getAiText());
+
                     dto.setCreatedAt(insight.getCreatedAt());
                     return dto;
                 })
