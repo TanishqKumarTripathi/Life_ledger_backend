@@ -12,7 +12,7 @@ import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -42,10 +42,10 @@ public class GeminiServiceImpl implements GeminiService {
     private final BankAccountRepository bankAccountRepository;
 
     // Constants
-    private static final int MAX_CATEGORIZATION_TXNS = 100;
+    private static final int MAX_CATEGORIZATION_TXNS = 50;
     private static final int MAX_RECURRING_TXNS = 90;
-    private static final int MAX_ANOMALY_TXNS = 120;
-    private static final int MAX_SUMMARY_TXNS = 200;
+    private static final int MAX_ANOMALY_TXNS = 90;
+    private static final int MAX_SUMMARY_TXNS = 100;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -137,7 +137,7 @@ public class GeminiServiceImpl implements GeminiService {
             }
 
             String prompt = buildCategorizationPrompt(aiCandidates, rules);
-            JsonNode res = callGeminiWithRetry(prompt);
+            JsonNode res = callGemini(prompt);
 
             if (res != null)
                 saveCategorizedResults(userId, res);
@@ -172,10 +172,12 @@ public class GeminiServiceImpl implements GeminiService {
             }
 
             String prompt = buildRecurringPrompt(txns);
-            JsonNode res = callGeminiWithRetry(prompt);
+            JsonNode res = callGemini(prompt);
 
-            if (res != null && accountId != null)
-                saveRecurringResults(userId, accountId, res);
+            if (res != null) {
+                Long accId = txns.get(0).getBankAccount().getId();
+                saveRecurringResults(userId, accId, res);
+            }
 
             setStatusForKey(key, Step.RECURRING, TaskStatus.State.DONE, null, res);
             log.info("Recurring DONE for {}", key);
@@ -197,7 +199,7 @@ public class GeminiServiceImpl implements GeminiService {
         try {
             List<Transaction> txns = loadTransactions(userId, accountId)
                     .stream()
-                    .filter(t -> t.getCategorySource() != null)
+                    .filter(t -> t.getCategory() != null)
                     .limit(MAX_ANOMALY_TXNS)
                     .toList();
 
@@ -207,7 +209,7 @@ public class GeminiServiceImpl implements GeminiService {
             }
 
             String prompt = buildAnomaliesPrompt(txns);
-            JsonNode res = callGeminiWithRetry(prompt);
+            JsonNode res = callGemini(prompt);
 
             if (res != null)
                 saveAnomalyResults(userId, res);
@@ -231,7 +233,7 @@ public class GeminiServiceImpl implements GeminiService {
         try {
             List<Transaction> txns = loadTransactions(userId, accountId)
                     .stream()
-                    .filter(t -> t.getCategorySource() != null)
+                    .filter(t -> t.getCategory() != null)
                     .limit(MAX_SUMMARY_TXNS)
                     .toList();
 
@@ -243,10 +245,12 @@ public class GeminiServiceImpl implements GeminiService {
             List<Goal> goals = goalRepository.findByUser_Id(userId);
 
             String prompt = buildSummaryPrompt(txns, goals);
-            JsonNode res = callGeminiWithRetry(prompt);
+            JsonNode res = callGemini(prompt);
 
-            if (res != null)
-                saveSummaryResults(accountId, res);
+            if (res != null) {
+                Long accId = txns.get(0).getBankAccount().getId();
+                saveSummaryResults(accId, res);
+            }
             setStatusForKey(key, Step.SUMMARY, TaskStatus.State.DONE, null, res);
             log.info("Summary DONE for {}", key);
         } catch (Exception ex) {
@@ -297,8 +301,7 @@ public class GeminiServiceImpl implements GeminiService {
     private List<Transaction> loadTransactions(Long userId, Long accountId) {
         if (accountId != null) {
             // ensure repository implements this
-            return transactionRepository.findAllByBankAccount_IdAndUser_Id(accountId, userId);
-
+            return transactionRepository.findAllByBankAccountId(accountId);
         } else {
             return transactionRepository.findAllByUserId(userId);
         }
@@ -327,45 +330,51 @@ public class GeminiServiceImpl implements GeminiService {
         throw new RuntimeException("Gemini failed after retries", lastEx);
     }
 
-    private JsonNode callGemini(String prompt) throws Exception {
-        Map<String, Object> part = Map.of("text", prompt);
-        Map<String, Object> content = Map.of("parts", List.of(part));
-        Map<String, Object> body = Map.of("contents", List.of(content));
+    private static final Object GEMINI_LOCK = new Object();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+    private JsonNode callGemini(String prompt) {
 
-        String url = GEMINI_URL + "?key=" + apiKey;
+        synchronized (GEMINI_LOCK) {
+            try {
+                Map<String, Object> part = Map.of("text", prompt);
+                Map<String, Object> content = Map.of("parts", List.of(part));
+                Map<String, Object> body = Map.of("contents", List.of(content));
 
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(connectTimeoutMs);
-        requestFactory.setReadTimeout(readTimeoutMs);
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
 
-        ResponseEntity<String> resp = geminiRestTemplate.postForEntity(url, new HttpEntity<>(body, headers),
-                String.class);
+                String url = GEMINI_URL + "?key=" + apiKey;
 
-        if (resp == null || resp.getBody() == null)
-            throw new RuntimeException("Empty response from Gemini");
+                ResponseEntity<String> resp = geminiRestTemplate.postForEntity(
+                        url,
+                        new HttpEntity<>(body, headers),
+                        String.class);
 
-        JsonNode root = objectMapper.readTree(resp.getBody());
-        JsonNode candidates = root.path("candidates");
-        if (!candidates.isArray() || candidates.size() == 0) {
-            throw new RuntimeException("Unexpected Gemini response (no candidates). Raw: " + resp.getBody());
-        }
+                if (resp.getBody() == null)
+                    throw new RuntimeException("Empty response from Gemini");
 
-        JsonNode first = candidates.get(0);
-        if (first == null)
-            throw new RuntimeException("No candidate[0] in Gemini response");
-        JsonNode parts = first.path("content").path("parts");
-        if (!parts.isArray() || parts.size() == 0)
-            throw new RuntimeException("No parts in candidate");
-        String text = parts.get(0).path("text").asText("").trim();
+                JsonNode root = objectMapper.readTree(resp.getBody());
+                JsonNode candidates = root.path("candidates");
 
-        String jsonText = extractJsonSnippet(text);
-        try {
-            return objectMapper.readTree(jsonText);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse Gemini JSON. Raw: " + text + " Extracted: " + jsonText, e);
+                if (!candidates.isArray() || candidates.isEmpty())
+                    throw new RuntimeException("No candidates in Gemini response");
+
+                JsonNode parts = candidates.get(0)
+                        .path("content")
+                        .path("parts");
+
+                if (!parts.isArray() || parts.isEmpty())
+                    throw new RuntimeException("No parts in Gemini response");
+
+                String text = parts.get(0).path("text").asText("");
+                return objectMapper.readTree(extractJsonSnippet(text));
+
+            } catch (HttpClientErrorException.TooManyRequests ex) {
+                throw new RuntimeException(
+                        "AI quota exceeded. Please wait ~30 seconds before retrying.");
+            } catch (Exception ex) {
+                throw new RuntimeException("Gemini call failed: " + ex.getMessage(), ex);
+            }
         }
     }
 
@@ -408,7 +417,6 @@ public class GeminiServiceImpl implements GeminiService {
         List<Map<String, Object>> compact = txns.stream().map(t -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", t.getId());
-            m.put("date", t.getDate() != null ? t.getDate().toString() : null);
             m.put("amount", t.getAmount() != null ? t.getAmount().doubleValue() : 0.0);
             m.put("merchant", t.getMerchant() == null ? "" : t.getMerchant());
             m.put("type", t.getTypeTransaction() != null ? t.getTypeTransaction().toString().toLowerCase() : "debit");
@@ -443,7 +451,11 @@ public class GeminiServiceImpl implements GeminiService {
                                 {
                                   "categorized": [
                                     { "id": 0, "type": "debit|credit", "category":"string", "subCategory":"string","date":"string" }
-                                  ]
+                                  ],
+                                  "categoryTotals": {
+                                    "Food": { "total": 0.0, "subCategories": { "Dining": 0.0, "Groceries": 0.0 } },
+                                    ...
+                                  }
                                 }
 
                                 USER RULES:
@@ -484,6 +496,10 @@ public class GeminiServiceImpl implements GeminiService {
                 - Rent
 
                 EXCLUDE EXAMPLES:
+                - EKART, AMAZON, FLIPKART
+                - Grocery stores
+                - Medical shops
+                - Fuel stations
                 - UPI to individuals
                 - Daily variable spends
 
@@ -535,7 +551,6 @@ public class GeminiServiceImpl implements GeminiService {
                                 Output STRICT JSON:
                                 {
                                   "anomalies":[ { "id":0, "reason":"string" } ],
-                                  "highFrequencyMerchants":[ { "merchant":"string", "count":0, "total":0.0 } ]
                                 }
 
                                 TRANSACTIONS:
@@ -569,12 +584,10 @@ public class GeminiServiceImpl implements GeminiService {
                 - Omit unknown fields
 
                                 You are LifeLedger's Financial Insights engine.
-                                Give overall summary of the whole transection.
                                 Produce strict JSON with these fields:
                                 {
                                   "summary": { "text":"string", "tone":"positive|warning|negative|neutral", "emoji":"string", "color":"string" },
                                   "nudges":[ { "type":"string", "text":"string" } ]
-                                  }
                                 }
 
                                 TRANSACTIONS:
@@ -587,98 +600,79 @@ public class GeminiServiceImpl implements GeminiService {
     // --------------------
     @Transactional
     protected void saveCategorizedResults(Long userId, JsonNode categorizedJson) {
-        try {
-            if (categorizedJson == null || !categorizedJson.has("categorized"))
-                return;
-            List<Transaction> toUpdate = new ArrayList<>();
+        if (categorizedJson == null || !categorizedJson.has("categorized"))
+            return;
 
-            Map<String, Category> catCache = categoryRepository.findAllByUser_Id(userId).stream()
-                    .collect(Collectors.toMap(c -> c.getName().toLowerCase(), c -> c));
+        // ✅ Load existing categories (managed)
+        Map<String, Category> catCache = categoryRepository
+                .findAllByUser_Id(userId)
+                .stream()
+                .collect(Collectors.toMap(
+                        c -> c.getName().toLowerCase(),
+                        c -> c));
 
-            List<Category> newCats = new ArrayList<>();
-            List<SubCategory> newSubCats = new ArrayList<>();
+        List<Transaction> toUpdate = new ArrayList<>();
 
-            for (JsonNode item : categorizedJson.path("categorized")) {
-                if (item == null || !item.isObject())
-                    continue;
-                long txnId = item.path("id").asLong(0L);
-                if (txnId == 0L)
-                    continue;
-                String catName = item.path("category").asText(null);
-                String subName = item.path("subCategory").asText(null);
-                String type = item.path("type").asText(null);
+        // ✅ STEP 1: Ensure ALL categories exist (SAVE FIRST)
+        for (JsonNode item : categorizedJson.path("categorized")) {
+            String catName = item.path("category").asText(null);
+            if (catName == null || catName.isBlank())
+                continue;
 
-                Transaction txn = transactionRepository.findById(txnId).orElse(null);
-                if (txn == null)
-                    continue;
-
-                Category category = null;
-                if (catName != null && !catName.isBlank()) {
-                    String key = catName.toLowerCase();
-                    if (catCache.containsKey(key))
-                        category = catCache.get(key);
-                    else {
-                        Category c = Category.builder().name(catName).user(User.builder().id(userId).build()).build();
-                        newCats.add(c);
-                        category = c;
-                        catCache.put(key, c);
-                    }
-                }
-
-                SubCategory sub = null;
-                if (subName != null && !subName.isBlank() && category != null) {
-                    Long catId = category.getId();
-                    if (catId != null) {
-                        Optional<SubCategory> scOpt = subCategoryRepository.findByCategory_IdAndNameIgnoreCase(catId,
-                                subName);
-                        if (scOpt.isPresent())
-                            sub = scOpt.get();
-                    }
-                    if (sub == null) {
-                        SubCategory sc = SubCategory.builder().name(subName).category(category).build();
-                        newSubCats.add(sc);
-                        sub = sc;
-                    }
-                }
-
-                CategorySource source = txn.getCategorySource();
-
-                boolean canAiOverwrite = source == null ||
-                        source == CategorySource.UNSET;
-
-                if (canAiOverwrite && category != null) {
-                    txn.setCategory(category);
-                    txn.setCategorySource(CategorySource.AI);
-                }
-
-                if (canAiOverwrite && sub != null) {
-                    txn.setSubCategory(sub);
-                }
-
-                if (type != null && !type.isBlank()) {
-                    try {
-                        txn.setTypeTransaction(com.Life_ledger.Enum.TransactionEnum.valueOf(type.toUpperCase()));
-                    } catch (Exception ignored) {
-                    }
-                }
-                toUpdate.add(txn);
-            }
-
-            if (!newCats.isEmpty()) {
-                List<Category> saved = categoryRepository.saveAll(newCats);
-                for (Category c : saved)
-                    catCache.put(c.getName().toLowerCase(), c);
-            }
-            if (!newSubCats.isEmpty())
-                subCategoryRepository.saveAll(newSubCats);
-            if (!toUpdate.isEmpty()) {
-                transactionRepository.saveAll(toUpdate);
-                log.info("Saved {} categorized transactions for user={}", toUpdate.size(), userId);
-            }
-
-        } catch (Exception e) {
-            log.error("Failed saving categorized results: {}", e.getMessage(), e);
+            catCache.computeIfAbsent(catName.toLowerCase(), k -> categoryRepository.save(
+                    Category.builder()
+                            .name(catName)
+                            .user(User.builder().id(userId).build())
+                            .categorySource(CategorySource.AI)
+                            .build()));
         }
+
+        // ✅ STEP 2: Attach MANAGED categories to transactions
+        for (JsonNode item : categorizedJson.path("categorized")) {
+
+            long txnId = item.path("id").asLong(0L);
+            if (txnId == 0L)
+                continue;
+
+            Transaction txn = transactionRepository.findById(txnId).orElse(null);
+            if (txn == null)
+                continue;
+
+            // ✅ Don’t overwrite USER / RULE categories
+            if (txn.getCategorySource() != null &&
+                    txn.getCategorySource() != CategorySource.UNSET)
+                continue;
+
+            String catName = item.path("category").asText(null);
+            if (catName == null)
+                continue;
+
+            Category category = catCache.get(catName.toLowerCase());
+
+            // ✅ HARD FK SET (same as rule-based)
+            txn.setCategory(category);
+            txn.setCategorySource(CategorySource.AI);
+
+            String subName = item.path("subCategory").asText(null);
+            if (subName != null && !subName.isBlank()) {
+                SubCategory sub = subCategoryRepository
+                        .findByCategory_IdAndNameIgnoreCase(category.getId(), subName)
+                        .orElseGet(() -> subCategoryRepository.save(
+                                SubCategory.builder()
+                                        .name(subName)
+                                        .category(category)
+                                        .build()));
+                txn.setSubCategory(sub);
+            }
+
+            toUpdate.add(txn);
+        }
+
+        // ✅ FORCE UPDATE
+        transactionRepository.saveAll(toUpdate);
+        transactionRepository.flush();
+
+        log.info("✅ AI categorized transactions updated = {}", toUpdate.size());
     }
 
     @Transactional
@@ -811,9 +805,13 @@ public class GeminiServiceImpl implements GeminiService {
             String text = summaryJson.path("summary").path("text").asText("");
             if (text == null || text.isBlank())
                 return;
+            BankAccount account = bankAccountRepository.findById(accountId)
+                    .orElseThrow(() -> new RuntimeException("Account not found"));
+
             Insight insight = Insight.builder()
-                    .bankAccount(BankAccount.builder().id(accountId).build())
+                    .bankAccount(account) // ✅ managed
                     .aiText(text)
+                    .createdAt(LocalDateTime.now())
                     .build();
             insightRepository.save(insight);
             log.info("Saved insight for user={}", accountId);
