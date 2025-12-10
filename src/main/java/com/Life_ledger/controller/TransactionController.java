@@ -156,4 +156,30 @@ public class TransactionController {
                 transactionService.getTransactionsByCategory(user.getId(), categoryId));
     }
 
+    @GetMapping("/month")
+    public ResponseEntity<List<TransactionResponse>> getByMonth(
+            @RequestHeader("Authorization") String token,
+            @RequestParam int month,
+            @RequestParam int year) {
+
+        User user = getUserFromToken(token);
+        return ResponseEntity.ok(
+                transactionService.getTransactionsByMonth(user.getId(), month, year));
+    }
+
+    @GetMapping("/sort")
+    public ResponseEntity<List<TransactionResponse>> sortTransactions(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(defaultValue = "date") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction) {
+
+        User user = getUserFromToken(token);
+
+        return ResponseEntity.ok(
+                transactionService.sortTransactions(
+                        user.getId(),
+                        sortBy,
+                        direction));
+    }
+
 }

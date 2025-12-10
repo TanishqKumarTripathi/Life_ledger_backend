@@ -26,6 +26,9 @@ public class InsightController {
     private final UserRepository userRepository;
     private final BankAccountRepository bankAccountRepository;
 
+    // ----------------------------------------------------
+    // Extract user from token
+    // ----------------------------------------------------
     private User getUserFromToken(String header) {
         if (header == null || !header.startsWith("Bearer ")) {
             throw new RuntimeException("Missing or malformed Authorization header");
@@ -53,7 +56,7 @@ public class InsightController {
 
             Insight insight = new Insight();
             insight.setAiText(request.getAiText());
-            insight.setUser(user);
+            //insight.setUser(user);
 
             Insight saved = insightService.createInsight(insight);
 
@@ -71,126 +74,130 @@ public class InsightController {
         }
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getOne(
-            @RequestHeader("Authorization") String token,
-            @PathVariable Long id) {
+//    @GetMapping("/{id}")
+//    public ResponseEntity<?> getOne(
+//            @RequestHeader("Authorization") String token,
+//            @PathVariable Long id) {
+//
+//        try {
+//            User user = getUserFromToken(token);
+//
+//            Insight insight = insightService.getInsight(id);
+//
+//            if (!insight.getUser().getId().equals(user.getId())) {
+//                return ResponseEntity.status(403).body(Map.of(
+//                        "status", "error",
+//                        "message", "Access denied"));
+//            }
+//
+//            InsightResponseDTO dto = InsightResponseDTO.fromEntity(insight);
+//
+//            return ResponseEntity.ok(Map.of(
+//                    "status", "success",
+//                    "insight", dto));
+//
+//        } catch (Exception ex) {
+//            return ResponseEntity.status(400).body(Map.of(
+//                    "status", "error",
+//                    "message", ex.getMessage()));
+//        }
+//    }
 
-        try {
-            User user = getUserFromToken(token);
+    // ----------------------------------------------------
+    // GET ALL INSIGHTS FOR A SPECIFIC BANK ACCOUNT
+    // ----------------------------------------------------
+    // @GetMapping("/account/{accountId}")
+    // public ResponseEntity<?> getAllByAccount(
+    // @RequestHeader("Authorization") String token,
+    // @PathVariable Long accountId) {
 
-            Insight insight = insightService.getInsight(id);
+    // try {
+    // User user = getUserFromToken(token);
 
-            if (!insight.getUser().getId().equals(user.getId())) {
-                return ResponseEntity.status(403).body(Map.of(
-                        "status", "error",
-                        "message", "Access denied"));
-            }
+    // // Validate ownership
+    // validateAccountOwner(accountId, user.getId());
 
-            InsightResponseDTO dto = InsightResponseDTO.fromEntity(insight);
+    // List<InsightResponseDTO> insights =
+    // insightService.getInsightsByBankAccountIdDTO(accountId);
 
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "insight", dto));
+    // return ResponseEntity.ok(Map.of(
+    // "status", "success",
+    // "count", insights.size(),
+    // "insights", insights));
 
-        } catch (Exception ex) {
-            return ResponseEntity.status(400).body(Map.of(
-                    "status", "error",
-                    "message", ex.getMessage()));
-        }
-    }
-
-    // -------------------------------------------------------------------
-    // GET ALL INSIGHTS for the logged in user
-    // -------------------------------------------------------------------
-    @GetMapping
-    public ResponseEntity<?> getAll(
-            @RequestHeader("Authorization") String token) {
-
-        try {
-            User user = getUserFromToken(token);
-
-            List<InsightResponseDTO> insights = insightService
-                    .getInsightsByUserIdDTO(user.getId());
-
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "count", insights.size(),
-                    "insights", insights));
-
-        } catch (Exception ex) {
-            return ResponseEntity.status(400).body(Map.of(
-                    "status", "error",
-                    "message", ex.getMessage()));
-        }
-    }
+    // } catch (Exception ex) {
+    // return ResponseEntity.badRequest().body(Map.of(
+    // "status", "error",
+    // "message", ex.getMessage()));
+    // }
+    // }
 
     // -------------------------------------------------------------------
     // UPDATE INSIGHT
     // -------------------------------------------------------------------
-    @PutMapping("/{id}")
-    public ResponseEntity<?> update(
-            @RequestHeader("Authorization") String token,
-            @PathVariable Long id,
-            @RequestBody InsightRequestDTO request) {
-
-        try {
-            User user = getUserFromToken(token);
-
-            Insight existing = insightService.getInsight(id);
-
-            if (!existing.getUser().getId().equals(user.getId())) {
-                return ResponseEntity.status(403).body(Map.of(
-                        "status", "error",
-                        "message", "Access denied"));
-            }
-
-            Insight updated = insightService.updateInsight(id, request.getAiText());
-            InsightResponseDTO dto = InsightResponseDTO.fromEntity(updated);
-
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "message", "Insight updated",
-                    "insight", dto));
-
-        } catch (Exception ex) {
-            return ResponseEntity.status(400).body(Map.of(
-                    "status", "error",
-                    "message", ex.getMessage()));
-        }
-    }
+//    @PutMapping("/{id}")
+//    public ResponseEntity<?> update(
+//            @RequestHeader("Authorization") String token,
+//            @PathVariable Long id,
+//            @RequestBody InsightRequestDTO request) {
+//
+//        try {
+//            User user = getUserFromToken(token);
+//
+//            Insight existing = insightService.getInsight(id);
+//
+//            if (!existing.getUser().getId().equals(user.getId())) {
+//                return ResponseEntity.status(403).body(Map.of(
+//                        "status", "error",
+//                        "message", "Access denied"));
+//            }
+//
+//            Insight updated = insightService.updateInsight(id, request.getAiText());
+//            InsightResponseDTO dto = InsightResponseDTO.fromEntity(updated);
+//
+//            return ResponseEntity.ok(Map.of(
+//                    "status", "success",
+//                    "message", "Insight updated",
+//                    "insight", dto));
+//
+//        } catch (Exception ex) {
+//            return ResponseEntity.status(400).body(Map.of(
+//                    "status", "error",
+//                    "message", ex.getMessage()));
+//        }
+//    }
 
     // -------------------------------------------------------------------
     // DELETE INSIGHT
     // -------------------------------------------------------------------
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(
-            @RequestHeader("Authorization") String token,
-            @PathVariable Long id) {
-
-        try {
-            User user = getUserFromToken(token);
-
-            Insight existing = insightService.getInsight(id);
-
-            if (!existing.getUser().getId().equals(user.getId())) {
-                return ResponseEntity.status(403).body(Map.of(
-                        "status", "error",
-                        "message", "Access denied"));
-            }
-
-            insightService.deleteInsight(id);
-
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "message", "Insight deleted"));
-
-        } catch (Exception ex) {
-            return ResponseEntity.status(400).body(Map.of(
-                    "status", "error",
-                    "message", ex.getMessage()));
-        }
-    }
+//    @DeleteMapping("/{id}")
+//    public ResponseEntity<?> delete(
+//            @RequestHeader("Authorization") String token,
+//            @PathVariable Long id) {
+//
+//        try {
+//            User user = getUserFromToken(token);
+//
+//            Insight existing = insightService.getInsight(id);
+//
+//            if (!existing.getUser().getId().equals(user.getId())) {
+//                return ResponseEntity.status(403).body(Map.of(
+//                        "status", "error",
+//                        "message", "Access denied"));
+//            }
+//
+//            insightService.deleteInsight(id);
+//
+//            return ResponseEntity.ok(Map.of(
+//                    "status", "success",
+//                    "message", "Insight deleted"));
+//
+//        } catch (Exception ex) {
+//            return ResponseEntity.status(400).body(Map.of(
+//                    "status", "error",
+//                    "message", ex.getMessage()));
+//        }
+//    }
 
     //latest
     @GetMapping("/latest")

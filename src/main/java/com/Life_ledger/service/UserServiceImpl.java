@@ -134,40 +134,45 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserInfoDto getFullUserInfo(Long userId) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Invalid user"));
-
-        List<AccountResponse> accounts = bankAccountRepository.findAllByUserId(userId)
-                .stream()
-                .map(AccountMapper::toResponse)
-                .collect(Collectors.toList());
-
-        List<CategoryResponse> categories = categoryRepository.findAllByUser_Id(userId)
-                .stream()
-                .map(CategoryMapper::toResponse)
-                .collect(Collectors.toList());
-
-        // TransactionMapper transactionMapper = new TransactionMapper();
-        // List<TransactionResponse> transactions =
-        // transactionRepository.findAllByBankAccount_User_Id(userId)
-        // .stream()
-        // .map(transactionMapper::toResponse)
-        // .collect(Collectors.toList());
-
-        List<GoalResponse> goals = goalRepository.findByUser(user)
-                .stream()
-                .map(GoalMapper::toDto)
-                .collect(Collectors.toList());
-
-        return UserInfoDto.builder()
-                .id(user.getId())
-                .name(user.getName())
-                .email(user.getEmail())
-                .accounts(accounts)
-                .categories(categories)
-                // .transactions(transactions)
-                .goals(goals)
-                .build();
+        return null;
     }
+
+//    @Override
+//    public UserInfoDto getFullUserInfo(Long userId) {
+//
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new RuntimeException("Invalid user"));
+//
+//        List<AccountResponse> accounts = bankAccountRepository.findAllByUserId(userId)
+//                .stream()
+//                .map(AccountMapper::toResponse)
+//                .collect(Collectors.toList());
+//
+//        List<CategoryResponse> categories = categoryRepository.findAllByUser_Id(userId)
+//                .stream()
+//                .map(CategoryMapper::toResponse)
+//                .collect(Collectors.toList());
+//
+//        // TransactionMapper transactionMapper = new TransactionMapper();
+//        // List<TransactionResponse> transactions =
+//        // transactionRepository.findAllByBankAccount_User_Id(userId)
+//        // .stream()
+//        // .map(transactionMapper::toResponse)
+//        // .collect(Collectors.toList());
+//
+//        List<GoalResponse> goals = goalRepository.findByUser(user)
+//                .stream()
+//                .map(GoalMapper::toDto)
+//                .collect(Collectors.toList());
+//
+//        return UserInfoDto.builder()
+//                .id(user.getId())
+//                .name(user.getName())
+//                .email(user.getEmail())
+//                .accounts(accounts)
+//                .categories(categories)
+//                // .transactions(transactions)
+//                .goals(goals)
+//                .build();
+//    }
 }

@@ -22,8 +22,8 @@ public class AnomalyRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "transaction_id")
+    @OneToOne
+    @JoinColumn(name = "transaction_id", nullable = false)
     private Transaction transaction;
 
     private String reason; // AI explanation

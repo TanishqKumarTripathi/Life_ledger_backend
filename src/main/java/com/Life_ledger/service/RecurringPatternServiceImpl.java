@@ -96,88 +96,93 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
     }
 
     @Override
-    @Transactional
     public void processInsightPatterns(Insight insight) {
-        try {
-            System.out.println("Processing insight patterns for user ID: " + insight.getUser().getId());
-            System.out.println("AI Text length: " + (insight.getAiText() != null ? insight.getAiText().length() : 0));
 
-            JsonNode rootNode = objectMapper.readTree(insight.getAiText());
-
-            // Debug: Print all available keys
-            System.out.println("🔍 Available JSON keys: ");
-            rootNode.fieldNames().forEachRemaining(key -> System.out.println("  - " + key));
-
-            // Debug: Print first 500 chars of AI text
-            String aiTextPreview = insight.getAiText().length() > 500
-                ? insight.getAiText().substring(0, 500) + "..."
-                : insight.getAiText();
-            System.out.println("🔍 AI Text preview: " + aiTextPreview);
-
-            // Try multiple possible nested paths for recurring data
-            JsonNode recurringNode = null;
-            String foundPath = "none";
-
-            // Check direct paths first
-            String[] directPaths = {"recurring", "patterns", "recurringPatterns"};
-            for (String path : directPaths) {
-                recurringNode = rootNode.path(path);
-                if (!recurringNode.isMissingNode() && recurringNode.isArray()) {
-                    foundPath = path;
-                    break;
-                }
-            }
-
-            // Check nested paths under "analysis"
-            if (recurringNode == null || recurringNode.isMissingNode()) {
-                JsonNode analysisNode = rootNode.path("analysis");
-                if (!analysisNode.isMissingNode()) {
-                    for (String path : directPaths) {
-                        recurringNode = analysisNode.path(path);
-                        if (!recurringNode.isMissingNode() && recurringNode.isArray()) {
-                            foundPath = "analysis." + path;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            System.out.println("🔍 Found recurring data at path: " + foundPath);
-
-            System.out.println("🔍 Recurring node exists: " + !recurringNode.isMissingNode());
-            System.out.println("🔍 Recurring node is array: " + recurringNode.isArray());
-            if (!recurringNode.isMissingNode()) {
-                System.out.println("🔍 Recurring node content: " + recurringNode.toString());
-            }
-
-            if (recurringNode != null && !recurringNode.isMissingNode() && recurringNode.isArray()) {
-                System.out.println("🔍 Found " + recurringNode.size() + " recurring patterns in AI response");
-                Long userId = insight.getUser().getId();
-
-                for (JsonNode patternNode : recurringNode) {
-                    System.out.println("🔍 Processing pattern node: " + patternNode.toString());
-                    try {
-                        createPatternFromJson(patternNode, userId);
-                        System.out.println("✅ Pattern processed successfully");
-                    } catch (Exception e) {
-                        System.err.println("❌ Error processing pattern: " + e.getMessage());
-                        e.printStackTrace();
-                    }
-                }
-            } else {
-                System.out.println("❌ No recurring array found in AI response");
-                System.out.println("🔍 RecurringNode is null: " + (recurringNode == null));
-                System.out.println("🔍 RecurringNode is missing: " + (recurringNode != null && recurringNode.isMissingNode()));
-                System.out.println("🔍 RecurringNode is array: " + (recurringNode != null && recurringNode.isArray()));
-                if (recurringNode != null) {
-                    System.out.println("🔍 RecurringNode content: " + recurringNode.toString());
-                }
-            }
-        } catch (Exception e) {
-            System.err.println(" Error processing recurring patterns: " + e.getMessage());
-            e.printStackTrace();
-        }
     }
+
+//    @Override
+//    @Transactional
+//    public void processInsightPatterns(Insight insight) {
+//        try {
+//            System.out.println("Processing insight patterns for user ID: " + insight.getUser().getId());
+//            System.out.println("AI Text length: " + (insight.getAiText() != null ? insight.getAiText().length() : 0));
+//
+//            JsonNode rootNode = objectMapper.readTree(insight.getAiText());
+//
+//            // Debug: Print all available keys
+//            System.out.println("🔍 Available JSON keys: ");
+//            rootNode.fieldNames().forEachRemaining(key -> System.out.println("  - " + key));
+//
+//            // Debug: Print first 500 chars of AI text
+//            String aiTextPreview = insight.getAiText().length() > 500
+//                ? insight.getAiText().substring(0, 500) + "..."
+//                : insight.getAiText();
+//            System.out.println("🔍 AI Text preview: " + aiTextPreview);
+//
+//            // Try multiple possible nested paths for recurring data
+//            JsonNode recurringNode = null;
+//            String foundPath = "none";
+//
+//            // Check direct paths first
+//            String[] directPaths = {"recurring", "patterns", "recurringPatterns"};
+//            for (String path : directPaths) {
+//                recurringNode = rootNode.path(path);
+//                if (!recurringNode.isMissingNode() && recurringNode.isArray()) {
+//                    foundPath = path;
+//                    break;
+//                }
+//            }
+//
+//            // Check nested paths under "analysis"
+//            if (recurringNode == null || recurringNode.isMissingNode()) {
+//                JsonNode analysisNode = rootNode.path("analysis");
+//                if (!analysisNode.isMissingNode()) {
+//                    for (String path : directPaths) {
+//                        recurringNode = analysisNode.path(path);
+//                        if (!recurringNode.isMissingNode() && recurringNode.isArray()) {
+//                            foundPath = "analysis." + path;
+//                            break;
+//                        }
+//                    }
+//                }
+//            }
+//
+//            System.out.println("🔍 Found recurring data at path: " + foundPath);
+//
+//            System.out.println("🔍 Recurring node exists: " + !recurringNode.isMissingNode());
+//            System.out.println("🔍 Recurring node is array: " + recurringNode.isArray());
+//            if (!recurringNode.isMissingNode()) {
+//                System.out.println("🔍 Recurring node content: " + recurringNode.toString());
+//            }
+//
+//            if (recurringNode != null && !recurringNode.isMissingNode() && recurringNode.isArray()) {
+//                System.out.println("🔍 Found " + recurringNode.size() + " recurring patterns in AI response");
+//                Long userId = insight.getUser().getId();
+//
+//                for (JsonNode patternNode : recurringNode) {
+//                    System.out.println("🔍 Processing pattern node: " + patternNode.toString());
+//                    try {
+//                        createPatternFromJson(patternNode, userId);
+//                        System.out.println("✅ Pattern processed successfully");
+//                    } catch (Exception e) {
+//                        System.err.println("❌ Error processing pattern: " + e.getMessage());
+//                        e.printStackTrace();
+//                    }
+//                }
+//            } else {
+//                System.out.println("❌ No recurring array found in AI response");
+//                System.out.println("🔍 RecurringNode is null: " + (recurringNode == null));
+//                System.out.println("🔍 RecurringNode is missing: " + (recurringNode != null && recurringNode.isMissingNode()));
+//                System.out.println("🔍 RecurringNode is array: " + (recurringNode != null && recurringNode.isArray()));
+//                if (recurringNode != null) {
+//                    System.out.println("🔍 RecurringNode content: " + recurringNode.toString());
+//                }
+//            }
+//        } catch (Exception e) {
+//            System.err.println(" Error processing recurring patterns: " + e.getMessage());
+//            e.printStackTrace();
+//        }
+//    }
 
     private void createPatternFromJson(JsonNode patternNode, Long userId) {
         // Handle the actual AI response format

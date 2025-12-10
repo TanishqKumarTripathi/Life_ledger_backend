@@ -1,6 +1,8 @@
 package com.Life_ledger.service;
 
 import com.Life_ledger.Enum.CategorySource;
+import com.Life_ledger.dto.insight.InsightType;
+import com.Life_ledger.dto.nudge.NudgeFact;
 import com.Life_ledger.entity.*;
 import com.Life_ledger.repository.*;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,6 +21,7 @@ import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -443,12 +446,12 @@ public class GeminiServiceImpl implements GeminiService {
         String rulesJson = objectMapper.writeValueAsString(compactRules);
 
         return """
-                STRICT RULES:
-                - Output ONLY valid JSON
-                - No markdown
-                - No explanations
-                - No extra text
-                - Omit unknown fields
+                            STRICT RULES:
+                            - Output ONLY valid JSON
+                            - No markdown
+                            - No explanations
+                            - No extra text
+                            - Omit unknown fields
 
                                 You are LifeLedger's Categorization engine. Use the USER RULES first, then AI fallback.
                                 Output STRICT JSON only with this shape:
@@ -591,6 +594,42 @@ public class GeminiServiceImpl implements GeminiService {
                                 TRANSACTIONS:
                                 """
                 + txJson + "\nGOALS:\n" + goalsJson;
+    }
+
+    // inside GeminiServiceImpl
+
+    private String buildNudgesPrompt(List<NudgeFact> facts) throws Exception {
+
+        String factsJson = objectMapper.writeValueAsString(facts);
+
+        return """
+                STRICT RULES:
+                - Output ONLY valid JSON
+                - No markdown
+                - No explanations
+                - No extra text
+                - Do NOT invent new facts, use only provided data
+
+                You are LifeLedger's Nudge Copywriter.
+                You receive a list of nudge facts (already computed).
+                Your job is ONLY to rewrite them into user-friendly messages.
+
+                INPUT FORMAT (facts):
+                """ + factsJson + """
+
+                OUTPUT FORMAT:
+                {
+                  "nudges": [
+                    {
+                      "goalId": 0,
+                      "title": "short title string",
+                      "message": "friendly but concise message",
+                      "emoji": "string",
+                      "tone": "positive|warning|critical|info"
+                    }
+                  ]
+                }
+                """;
     }
 
     // --------------------
@@ -800,21 +839,33 @@ public class GeminiServiceImpl implements GeminiService {
         try {
             if (summaryJson == null || !summaryJson.has("summary"))
                 return;
-            String text = summaryJson.path("summary").path("text").asText("");
-            if (text == null || text.isBlank())
-                return;
+
             BankAccount account = bankAccountRepository.findById(accountId)
                     .orElseThrow(() -> new RuntimeException("Account not found"));
 
+            String period = YearMonth.now().toString(); // "2025-12"
+
+            // ✅ REPLACE existing summary for same period
+            insightRepository.deleteByBankAccount_IdAndTypeAndPeriod(
+                    accountId,
+                    InsightType.SUMMARY,
+                    period);
+
+            String fullJson = objectMapper.writeValueAsString(summaryJson);
+
             Insight insight = Insight.builder()
-                    .bankAccount(account) // ✅ managed
-                    .aiText(text)
-                    .createdAt(LocalDateTime.now())
+                    .bankAccount(account)
+                    .type(InsightType.SUMMARY)
+                    .period(period)
+                    .aiText(fullJson)
                     .build();
+
             insightRepository.save(insight);
-            log.info("Saved insight for user={}", accountId);
+
+            log.info("✅ SUMMARY insight saved (replaced) account={} period={}", accountId, period);
+
         } catch (Exception e) {
-            log.error("Failed saving summary results: {}", e.getMessage(), e);
+            log.error("❌ Failed saving summary insight", e);
         }
     }
 

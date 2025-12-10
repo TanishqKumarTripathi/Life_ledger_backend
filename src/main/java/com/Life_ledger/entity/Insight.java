@@ -7,6 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
+
+import com.Life_ledger.dto.insight.InsightType;
 
 @Entity
 @Table(name = "insight")
@@ -20,23 +23,27 @@ public class Insight {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "bank_account_id")
+    @ManyToOne
+    @JoinColumn(name = "bank_account_id", nullable = false)
     private BankAccount bankAccount;
 
-    @Lob
-    @Column(name = "ai_text", columnDefinition = "TEXT")
-    private String aiText;
+    @OneToMany
+    @JoinColumn(name = "insight_id")
+    private List<Transaction> relatedTransactions;
 
-    @Column(name = "created_at")
+    @Lob
+    @Basic(fetch = FetchType.EAGER)
+    @Column(columnDefinition = "TEXT")
+    private String aiText;
     private LocalDateTime createdAt;
+
+    @Enumerated(EnumType.STRING)
+    private InsightType type; // SUMMARY
+
+    private String period;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now();
     }
 }

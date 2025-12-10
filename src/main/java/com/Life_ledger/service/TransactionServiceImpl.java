@@ -9,6 +9,7 @@ import com.Life_ledger.entity.*;
 import com.Life_ledger.mapper.TransactionMapper;
 import com.Life_ledger.repository.*;
 import com.Life_ledger.service.TransactionService;
+import org.springframework.data.domain.Sort;
 
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -97,19 +98,6 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    @Transactional
-    public void deleteTransaction(Long userId, Long id) {
-        Transaction txn = transactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
-        checkUserOwnership(userId, txn.getBankAccount());
-        
-        // Delete related anomaly records first
-        anomalyRecordRepository.deleteByTransactionId(id);
-        
-        transactionRepository.delete(txn);
-    }
-
-    @Override
     public UserCorrectionResponse addCorrection(Long userId, Long transactionId, UserCorrectionRequest request) {
         Transaction txn = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found"));
@@ -172,6 +160,22 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
+    public void deleteTransaction(Long userId, Long transactionId) {
+
+        Transaction transaction = transactionRepository
+                .findByIdAndBankAccount_User_Id(transactionId, userId)
+                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+
+        // ✅ correction already handled
+        if (transaction.getCorrection() != null) {
+            transaction.getCorrection().setTransaction(null);
+        }
+
+        transactionRepository.delete(transaction);
+
+    }
+
     public BigDecimal getTotalSpent(Long userId, LocalDate startDate, LocalDate endDate) {
         return transactionRepository.getTotalSpentByUser(userId);
     }
@@ -192,16 +196,16 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     public void deleteAllTransactions(Long userId) {
         List<Transaction> transactions = transactionRepository.findAllByBankAccount_User_Id(userId);
-        
+
         // Delete all anomaly records for these transactions
         List<Long> transactionIds = transactions.stream()
                 .map(Transaction::getId)
                 .collect(Collectors.toList());
-        
+
         if (!transactionIds.isEmpty()) {
             anomalyRecordRepository.deleteByTransactionIdIn(transactionIds);
         }
-        
+
         transactionRepository.deleteAll(transactions);
     }
 
@@ -226,6 +230,33 @@ public class TransactionServiceImpl implements TransactionService {
 
         return transactionRepository
                 .findByCategory_IdAndBankAccount_User_Id(categoryId, userId)
+                .stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<TransactionResponse> getTransactionsByMonth(Long userId, int month, int year) {
+
+        return transactionRepository
+                .findByUserAndMonth(userId, month, year)
+                .stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<TransactionResponse> sortTransactions(
+            Long userId,
+            String sortBy,
+            String direction) {
+
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        return transactionRepository
+                .findByBankAccount_User_Id(userId, sort)
                 .stream()
                 .map(transactionMapper::toResponse)
                 .toList();
