@@ -4,7 +4,6 @@ import com.Life_ledger.dto.auth.LoginRequest;
 import com.Life_ledger.dto.auth.SignupRequest;
 import com.Life_ledger.dto.category.CategoryResponse;
 import com.Life_ledger.dto.goals.GoalResponse;
-import com.Life_ledger.dto.transaction.TransactionResponse;
 import com.Life_ledger.dto.user.UserInfoDto;
 import com.Life_ledger.dto.user.UserResponse;
 import com.Life_ledger.dto.account.AccountResponse;
@@ -13,12 +12,10 @@ import com.Life_ledger.entity.User;
 import com.Life_ledger.mapper.AccountMapper;
 import com.Life_ledger.mapper.CategoryMapper;
 import com.Life_ledger.mapper.GoalMapper;
-import com.Life_ledger.mapper.TransactionMapper;
 import com.Life_ledger.mapper.UserMapper;
 import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.CategoryRepository;
 import com.Life_ledger.repository.GoalRepository;
-import com.Life_ledger.repository.TransactionRepository;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
 import com.cloudinary.Cloudinary;
@@ -44,9 +41,9 @@ public class UserServiceImpl implements UserService {
     private final Cloudinary cloudinary;
     private final BankAccountRepository bankAccountRepository;
     private final CategoryRepository categoryRepository;
-    private final TransactionRepository transactionRepository;
+    // private final TransactionRepository transactionRepository;
     private final GoalRepository goalRepository;
-    private final TransactionMapper transactionMapper;
+    // private final TransactionMapper transactionMapper;
 
     @Override
     public AuthResponse signup(SignupRequest request) {

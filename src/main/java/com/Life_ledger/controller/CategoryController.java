@@ -2,10 +2,14 @@ package com.Life_ledger.controller;
 
 import com.Life_ledger.dto.category.CategoryRequest;
 import com.Life_ledger.dto.category.CategoryResponse;
+import com.Life_ledger.dto.transaction.TransactionResponse;
+// import com.Life_ledger.dto.entry.TransactionResponse;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
 import com.Life_ledger.service.CategoryService;
+import com.Life_ledger.service.TransactionService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +24,7 @@ public class CategoryController {
     private final CategoryService categoryService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final TransactionService transactionService;
 
     private User getUserFromToken(String token) {
         token = token.substring(7);
@@ -81,4 +86,16 @@ public class CategoryController {
         categoryService.deleteCategory(user.getId(), id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/by-category/{categoryId}")
+    public ResponseEntity<List<TransactionResponse>> getTransactionsByCategory(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long categoryId) {
+
+        User user = getUserFromToken(token);
+
+        return ResponseEntity.ok(
+                transactionService.getTransactionsByCategory(user.getId(), categoryId));
+    }
+
 }

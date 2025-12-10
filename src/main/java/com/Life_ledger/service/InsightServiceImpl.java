@@ -40,6 +40,11 @@ public class InsightServiceImpl implements InsightService {
     }
 
     @Override
+    public List<Insight> getInsightsByBankAccountId(Long accountId) {
+        return List.of();
+    }
+
+    @Override
     public List<Insight> getInsightsByUserId(Long userId) {
         return insightRepository.findByUser_Id(userId);
     }

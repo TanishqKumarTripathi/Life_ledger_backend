@@ -1,15 +1,17 @@
 package com.Life_ledger.service;
 
+import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.Insight;
 import com.Life_ledger.entity.RecurringPattern;
 import com.Life_ledger.entity.Transaction;
 import com.Life_ledger.repository.RecurringPatternRepository;
+import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.TransactionRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -20,81 +22,77 @@ import java.util.List;
 public class RecurringPatternServiceImpl implements RecurringPatternService {
 
     private final RecurringPatternRepository recurringPatternRepository;
+    private final BankAccountRepository bankAccountRepository;
     private final TransactionRepository transactionRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public RecurringPattern createRecurringPattern(RecurringPattern recurringPattern, Long userId) {
-        // Set bank account from transaction if not already set
-        if (recurringPattern.getBankAccount() == null) {
-            if (recurringPattern.getTransaction() != null) {
-                recurringPattern.setBankAccount(recurringPattern.getTransaction().getBankAccount());
-            } else if (recurringPattern.getMerchant() != null && recurringPattern.getAmount() != null && userId != null) {
-                // Find matching transaction to get bank account
-                List<Transaction> matchingTxns = transactionRepository.findByMerchantAndAmountRange(
-                    userId,
-                    recurringPattern.getMerchant(), 
-                    recurringPattern.getAmount(), 
-                    new BigDecimal("50.00")
-                );
-                if (!matchingTxns.isEmpty() && matchingTxns.get(0).getBankAccount() != null) {
-                    recurringPattern.setBankAccount(matchingTxns.get(0).getBankAccount());
-                    if (recurringPattern.getTransaction() == null) {
-                        recurringPattern.setTransaction(matchingTxns.get(0));
-                    }
-                }
-            }
+        BankAccount account = bankAccountRepository.findById(recurringPattern.getBankAccount().getId())
+                .orElseThrow(() -> new RuntimeException("Bank account not found"));
+        if (!account.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized bank account access");
         }
+        recurringPattern.setBankAccount(account);
         return recurringPatternRepository.save(recurringPattern);
     }
 
     @Override
-    public RecurringPattern updateRecurringPattern(Long id, RecurringPattern recurringPattern) {
-        RecurringPattern existing = recurringPatternRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Recurring Pattern not found"));
+    public RecurringPattern updateRecurringPattern(Long id, RecurringPattern updated, Long userId) {
+        RecurringPattern existing = getRecurringPattern(id, userId);
 
-        existing.setMerchant(recurringPattern.getMerchant());
-        existing.setAmount(recurringPattern.getAmount());
-        existing.setFrequency(recurringPattern.getFrequency());
-        existing.setNextDueDate(recurringPattern.getNextDueDate());
-        existing.setTransaction(recurringPattern.getTransaction());
-        
-        // Update bank account from transaction
-        if (recurringPattern.getTransaction() != null) {
-            existing.setBankAccount(recurringPattern.getTransaction().getBankAccount());
-        }
+        existing.setMerchant(updated.getMerchant());
+        existing.setAmount(updated.getAmount());
+        existing.setFrequency(updated.getFrequency());
+        existing.setReason(updated.getReason());
+        existing.setNextDueDate(updated.getNextDueDate());
 
         return recurringPatternRepository.save(existing);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public RecurringPattern getRecurringPattern(Long id) {
-        return recurringPatternRepository.findById(id)
+    public RecurringPattern getRecurringPattern(Long id, Long userId) {
+        RecurringPattern pattern = recurringPatternRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Recurring Pattern not found"));
+
+        if (!pattern.getBankAccount().getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized access");
+        }
+
+        return pattern;
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<RecurringPattern> getAllRecurringPatterns() {
-        return recurringPatternRepository.findAllWithBankAccount();
+    public List<RecurringPattern> getByBankAccount(Long bankAccountId, Long userId) {
+        BankAccount account = bankAccountRepository.findById(bankAccountId)
+                .orElseThrow(() -> new RuntimeException("Bank account not found"));
+
+        if (!account.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized access");
+        }
+
+        return recurringPatternRepository.findByBankAccount_Id(bankAccountId);
     }
 
     @Override
-    @Transactional(readOnly = true)
+    public void deleteRecurringPattern(Long id, Long userId) {
+        RecurringPattern pattern = getRecurringPattern(id, userId);
+        recurringPatternRepository.delete(pattern);
+    }
+
+    @Override
     public List<RecurringPattern> getRecurringPatternsByUserId(Long userId) {
-        return recurringPatternRepository.findByUserIdWithBankAccount(userId);
+        return List.of();
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<RecurringPattern> getRecurringPatternsByAccountId(Long accountId) {
-        return recurringPatternRepository.findByBankAccountId(accountId);
+        return List.of();
     }
 
     @Override
     public void deleteRecurringPattern(Long id) {
-        recurringPatternRepository.deleteById(id);
+
     }
 
     @Override
@@ -103,23 +101,23 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
         try {
             System.out.println("Processing insight patterns for user ID: " + insight.getUser().getId());
             System.out.println("AI Text length: " + (insight.getAiText() != null ? insight.getAiText().length() : 0));
-            
+
             JsonNode rootNode = objectMapper.readTree(insight.getAiText());
-            
+
             // Debug: Print all available keys
             System.out.println("🔍 Available JSON keys: ");
             rootNode.fieldNames().forEachRemaining(key -> System.out.println("  - " + key));
-            
+
             // Debug: Print first 500 chars of AI text
-            String aiTextPreview = insight.getAiText().length() > 500 
+            String aiTextPreview = insight.getAiText().length() > 500
                 ? insight.getAiText().substring(0, 500) + "..."
                 : insight.getAiText();
             System.out.println("🔍 AI Text preview: " + aiTextPreview);
-            
+
             // Try multiple possible nested paths for recurring data
             JsonNode recurringNode = null;
             String foundPath = "none";
-            
+
             // Check direct paths first
             String[] directPaths = {"recurring", "patterns", "recurringPatterns"};
             for (String path : directPaths) {
@@ -129,7 +127,7 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
                     break;
                 }
             }
-            
+
             // Check nested paths under "analysis"
             if (recurringNode == null || recurringNode.isMissingNode()) {
                 JsonNode analysisNode = rootNode.path("analysis");
@@ -143,19 +141,19 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
                     }
                 }
             }
-            
+
             System.out.println("🔍 Found recurring data at path: " + foundPath);
-            
+
             System.out.println("🔍 Recurring node exists: " + !recurringNode.isMissingNode());
             System.out.println("🔍 Recurring node is array: " + recurringNode.isArray());
             if (!recurringNode.isMissingNode()) {
                 System.out.println("🔍 Recurring node content: " + recurringNode.toString());
             }
-            
+
             if (recurringNode != null && !recurringNode.isMissingNode() && recurringNode.isArray()) {
                 System.out.println("🔍 Found " + recurringNode.size() + " recurring patterns in AI response");
                 Long userId = insight.getUser().getId();
-                
+
                 for (JsonNode patternNode : recurringNode) {
                     System.out.println("🔍 Processing pattern node: " + patternNode.toString());
                     try {
@@ -187,49 +185,49 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
         String amountRange = patternNode.path("amount_range").asText();
         String frequency = patternNode.path("frequency").asText("Monthly");
         String category = patternNode.path("category").asText();
-        
+
         // Extract merchant name from description (first part before parentheses)
         String merchant = extractMerchantFromDescription(description);
-        
+
         // Extract amount from amount_range (use middle value or first number found)
         BigDecimal amount = extractAmountFromRange(amountRange);
-        
+
         System.out.println("🔍 Processing recurring pattern:");
         System.out.println("🔍   - Description: " + description);
         System.out.println("🔍   - Amount Range: " + amountRange);
         System.out.println("🔍   - Extracted Merchant: " + merchant);
         System.out.println("🔍   - Extracted Amount: " + amount);
         System.out.println("🔍   - Frequency: " + frequency);
-        
+
         if (merchant.isEmpty() || amount.compareTo(BigDecimal.ZERO) <= 0) {
             System.out.println("❌ Skipping pattern - empty merchant (" + merchant.isEmpty() + ") or zero amount (" + amount + ")");
             return;
         }
-        
+
         // Find matching transaction
         List<Transaction> matchingTransactions = transactionRepository.findByMerchantAndAmountRange(
             userId, merchant, amount, new BigDecimal("50.00")
         );
-        
+
         System.out.println(" Found " + matchingTransactions.size() + " matching transactions for merchant: " + merchant);
-        
+
         if (!matchingTransactions.isEmpty()) {
             Transaction sourceTransaction = matchingTransactions.get(0);
-            System.out.println("🔍 Source transaction ID: " + sourceTransaction.getId() + ", Bank Account ID: " + 
+            System.out.println("🔍 Source transaction ID: " + sourceTransaction.getId() + ", Bank Account ID: " +
                 (sourceTransaction.getBankAccount() != null ? sourceTransaction.getBankAccount().getId() : "NULL"));
-            
+
             if (sourceTransaction.getBankAccount() == null) {
                 System.out.println("❌ Transaction has no bank account, skipping pattern creation");
                 return;
             }
-            
+
             // Check if pattern already exists for this merchant and bank account
             boolean patternExists = recurringPatternRepository.findByUserIdWithBankAccount(userId)
                 .stream()
-                .anyMatch(p -> p.getMerchant().equalsIgnoreCase(merchant) && 
+                .anyMatch(p -> p.getMerchant().equalsIgnoreCase(merchant) &&
                          p.getBankAccount() != null &&
                          p.getBankAccount().getId().equals(sourceTransaction.getBankAccount().getId()));
-            
+
             if (!patternExists) {
                 RecurringPattern pattern = new RecurringPattern();
                 pattern.setMerchant(merchant);
@@ -239,9 +237,9 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
                 pattern.setNextDueDate(calculateNextDueDate(frequency));
                 pattern.setTransaction(sourceTransaction);
                 pattern.setBankAccount(sourceTransaction.getBankAccount());
-                
+
                 RecurringPattern saved = recurringPatternRepository.save(pattern);
-                System.out.println("✅ Saved recurring pattern ID: " + saved.getId() + ", merchant: " + merchant + 
+                System.out.println("✅ Saved recurring pattern ID: " + saved.getId() + ", merchant: " + merchant +
                     ", bank account ID: " + (saved.getBankAccount() != null ? saved.getBankAccount().getId() : "NULL"));
             } else {
                 System.out.println("ℹ️ Pattern already exists for merchant: " + merchant);
@@ -259,7 +257,7 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
             default -> now.plusMonths(1); // Monthly default
         };
     }
-    
+
     private String extractMerchantFromDescription(String description) {
         // Extract merchant from patterns like "Internet/Fiber Bill (Air Fiber/Jio)"
         if (description.contains("(")) {
@@ -274,11 +272,11 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
         // Fallback: use first part before parentheses
         return description.split("\\(")[0].trim();
     }
-    
+
     private BigDecimal extractAmountFromRange(String amountRange) {
         // Handle patterns like "₹1,047.84", "₹3,000 to ₹7,000", "Approx. ₹1,000"
         String cleanRange = amountRange.replaceAll("[₹,Approx.to]", "").trim();
-        
+
         // Extract first number found
         String[] parts = cleanRange.split("\\s+");
         for (String part : parts) {
@@ -288,7 +286,7 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
                 // Continue to next part
             }
         }
-        
+
         // Fallback: return 0 if no valid number found
         return BigDecimal.ZERO;
     }

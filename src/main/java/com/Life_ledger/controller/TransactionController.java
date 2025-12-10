@@ -1,9 +1,7 @@
 package com.Life_ledger.controller;
 
-import com.Life_ledger.dto.transaction.TransactionRequest;
-import com.Life_ledger.dto.transaction.TransactionResponse;
-import com.Life_ledger.dto.usercorrection.UserCorrectionRequest;
-import com.Life_ledger.dto.usercorrection.UserCorrectionResponse;
+import com.Life_ledger.dto.transaction.*;
+import com.Life_ledger.dto.usercorrection.*;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.service.TransactionService;
 import com.Life_ledger.repository.UserRepository;
@@ -17,9 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-
-
-
 
 @RestController
 @RequestMapping("/api/transactions")
@@ -85,7 +80,7 @@ public class TransactionController {
         return ResponseEntity.ok(recentTx);
     }
 
-    
+
     @PutMapping("/{id}")
     public ResponseEntity<TransactionResponse> updateTransaction(
             @RequestHeader("Authorization") String token,
@@ -103,6 +98,15 @@ public class TransactionController {
 
         User user = getUserFromToken(token);
         transactionService.deleteTransaction(user.getId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/delete-all")
+    public ResponseEntity<Void> deleteAllTransactions(
+            @RequestHeader("Authorization") String token) {
+
+        User user = getUserFromToken(token);
+        transactionService.deleteAllTransactions(user.getId());
         return ResponseEntity.noContent().build();
     }
 
@@ -140,4 +144,16 @@ public class TransactionController {
         User user = getUserFromToken(token);
         return ResponseEntity.ok(transactionService.getAnomalyTransactions(user.getId()));
     }
+
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<List<TransactionResponse>> getByCategory(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long categoryId) {
+
+        User user = getUserFromToken(token);
+
+        return ResponseEntity.ok(
+                transactionService.getTransactionsByCategory(user.getId(), categoryId));
+    }
+
 }

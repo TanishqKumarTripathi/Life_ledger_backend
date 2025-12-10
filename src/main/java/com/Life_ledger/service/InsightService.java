@@ -10,6 +10,7 @@ public interface InsightService {
 
     Insight getInsight(Long id);
 
+    List<Insight> getInsightsByBankAccountId(Long accountId);
     List<Insight> getInsightsByUserId(Long userId);
 
     Insight updateInsight(Long id, String aiText);
@@ -21,7 +22,7 @@ public interface InsightService {
     InsightResponseDTO getInsightDTO(Long id);
 
     Insight getLatestInsight(Long userId);
-    
+
     // AI Analysis methods
     Object getInsightSection(Long userId, String sectionName);
     Object getInsightSectionByAccount(Long accountId, String sectionName);

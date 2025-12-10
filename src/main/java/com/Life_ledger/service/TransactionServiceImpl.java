@@ -10,8 +10,8 @@ import com.Life_ledger.mapper.TransactionMapper;
 import com.Life_ledger.repository.*;
 import com.Life_ledger.service.TransactionService;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -169,16 +169,58 @@ public class TransactionServiceImpl implements TransactionService {
     public BigDecimal getTotalSpent(Long userId, LocalDate startDate, LocalDate endDate) {
         return transactionRepository.getTotalSpentByUser(userId);
     }
-    
+
     @Override
     public BigDecimal getTransactionCount(Long userId) {
         return transactionRepository.getTransactionCount(userId);
     }
-    
+
     @Override
     public List<TransactionResponse> getRecentTransactions(Long userId) {
         return transactionRepository.findRecentTransactionsByUserId(userId).stream()
                 .map(transactionMapper::toResponse)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional
+    public void deleteAllTransactions(Long userId) {
+
+        List<Transaction> transactions = transactionRepository.findAllByBankAccount_User_Id(userId);
+
+        for (Transaction transaction : transactions) {
+            if (transaction.getCorrection() != null) {
+                transaction.getCorrection().setTransaction(null);
+            }
+        }
+
+        transactionRepository.deleteAll(transactions);
+    }
+
+    public List<Transaction> getTransactionsByCategory(Long categoryId) {
+
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        return transactionRepository.findByCategory(category);
+    }
+
+    @Override
+    public List<TransactionResponse> getTransactionsByCategory(Long userId, Long categoryId) {
+
+        // ✅ Ownership check (important)
+        boolean categoryExists = categoryRepository
+                .existsByIdAndUser_Id(categoryId, userId);
+
+        if (!categoryExists) {
+            throw new RuntimeException("Category not found or unauthorized");
+        }
+
+        return transactionRepository
+                .findByCategory_IdAndBankAccount_User_Id(categoryId, userId)
+                .stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+    }
+
 }

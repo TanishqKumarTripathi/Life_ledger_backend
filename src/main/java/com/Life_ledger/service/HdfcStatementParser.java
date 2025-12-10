@@ -398,7 +398,7 @@ public class HdfcStatementParser {
             if (curr == null)
                 continue;
             if (curr.get("type") != null)
-                continue; // already set by CSV parser
+                continue;
             if (i == 0) {
                 curr.put("type", "DEBIT");
                 continue;

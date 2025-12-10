@@ -16,7 +16,9 @@ public interface TransactionService {
 
     TransactionResponse updateTransaction(Long userId, Long id, TransactionRequest request);
 
-    void deleteTransaction(Long userId, Long id);
+    void deleteTransaction(Long userId, Long transactionId);
+
+    void deleteAllTransactions(Long userId);
 
     UserCorrectionResponse addCorrection(Long userId, Long transactionId, UserCorrectionRequest request);
 
@@ -29,5 +31,7 @@ public interface TransactionService {
     BigDecimal getTransactionCount(Long userId);
 
     List<TransactionResponse> getRecentTransactions(Long userId);
+
+    List<TransactionResponse> getTransactionsByCategory(Long userId, Long categoryId);
 
 }

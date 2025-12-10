@@ -1,5 +1,6 @@
 package com.Life_ledger.entity;
 
+import com.Life_ledger.Enum.CategorySource;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -26,6 +27,9 @@ public class Category {
     @ManyToOne
     @JoinColumn(name = "bank_account_id")
     private BankAccount bankAccount;
+
+    @Enumerated(EnumType.STRING)
+    private CategorySource categorySource;
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
     private List<SubCategory> subCategories;

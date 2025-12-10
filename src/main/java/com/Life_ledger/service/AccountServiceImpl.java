@@ -87,7 +87,6 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    @Transactional
     public String deleteAccount(Long userId, Long accountId) {
 
         BankAccount existing = bankAccountRepository.findById(accountId)
@@ -97,14 +96,8 @@ public class AccountServiceImpl implements AccountService {
             throw new RuntimeException("Unauthorized deletion");
         }
 
-        // Delete all associated data in correct order
-        recurringPatternRepository.deleteByBankAccountId(accountId);
-        transactionRepository.deleteByBankAccountId(accountId);
-        
-        // Finally delete the bank account
         bankAccountRepository.delete(existing);
-        
-        return "Account and all associated data deleted successfully";
+        return "Account deleted";
     }
 
     @Override
