@@ -1,14 +1,31 @@
 package com.Life_ledger.controller;
 
+import com.Life_ledger.dto.anomaly.AnomalyResponse;
+import com.Life_ledger.dto.insight.InsightResponseDTO;
+import com.Life_ledger.dto.insight.InsightSummaryResponse;
+import com.Life_ledger.dto.recurring.RecurringResponseDto;
+import com.Life_ledger.entity.AnomalyRecord;
+import com.Life_ledger.entity.BankAccount;
+import com.Life_ledger.entity.RecurringPattern;
+import com.Life_ledger.entity.User;
+import com.Life_ledger.mapper.Recurringmapper;
+import com.Life_ledger.repository.AnomalyRecordRepository;
+import com.Life_ledger.repository.BankAccountRepository;
+import com.Life_ledger.repository.RecurringPatternRepository;
+import com.Life_ledger.repository.UserRepository;
+import com.Life_ledger.service.AnomalyRecordService;
 import com.Life_ledger.service.GeminiService;
 import com.Life_ledger.service.GeminiServiceImpl.Step;
+import com.Life_ledger.service.InsightService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -16,6 +33,12 @@ import java.util.Map;
 public class AIController {
 
     private final GeminiService geminiService;
+    private final AnomalyRecordService anomalyRecordService;
+    private final InsightService insightService;
+    private final RecurringPatternRepository recurringPatternRepository;
+    private final Recurringmapper recurringMapper;
+    private final UserRepository userRepository;
+    private final BankAccountRepository bankAccountRepository;
 
     // ---------------------------------------------------------------------
     // 🔹 Extract userId from JWT (WITHOUT JwtService)
@@ -50,8 +73,11 @@ public class AIController {
     public ResponseEntity<?> startAnalysis(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(required = false) Long accountId) {
+
         try {
             Long userId = extractUserIdFromJwt(authHeader);
+            System.out.println("Analyze endpoint received accountId = " + accountId);
+            System.out.println("Analyze running for user = " + userId);
 
             geminiService.analyzeUserTransactionsAsync(userId, accountId);
 
@@ -207,5 +233,122 @@ public class AIController {
     @GetMapping("/models")
     public String listModels() {
         return geminiService.listModels();
+    }
+
+    // ---------------------------------------------------------------------
+    // 🔹 GET: Retrieve Anomalies (from anomaly_records table)
+    // ---------------------------------------------------------------------
+    @GetMapping("/anomalies")
+    public ResponseEntity<?> getAnomalies(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) Long accountId) {
+        try {
+            Long userId = extractUserIdFromJwt(authHeader);
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            List<AnomalyRecord> anomalies;
+            if (accountId != null) {
+                BankAccount account = bankAccountRepository.findByIdAndUser(accountId, user)
+                        .orElseThrow(() -> new RuntimeException("Account not found or access denied"));
+                anomalies = anomalyRecordService.getAnomaliesByBankAccount(accountId);
+            } else {
+                anomalies = anomalyRecordService.getAnomaliesByUser(userId);
+            }
+            
+            List<AnomalyResponse> responses = anomalies.stream()
+                    .map(this::toAnomalyResponse)
+                    .toList();
+            
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "count", responses.size(),
+                    "anomalies", responses
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // 🔹 GET: Retrieve Recurring Patterns (from recurring_patterns table)
+    // ---------------------------------------------------------------------
+    @GetMapping("/recurring")
+    public ResponseEntity<?> getRecurring(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) Long accountId) {
+        try {
+            Long userId = extractUserIdFromJwt(authHeader);
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            List<RecurringPattern> patterns;
+            if (accountId != null) {
+                BankAccount account = bankAccountRepository.findByIdAndUser(accountId, user)
+                        .orElseThrow(() -> new RuntimeException("Account not found or access denied"));
+                patterns = recurringPatternRepository.findByBankAccount_Id(accountId);
+            } else {
+                patterns = recurringPatternRepository.findByBankAccount_User_Id(userId);
+            }
+            
+            List<RecurringResponseDto> responses = patterns.stream()
+                    .map(recurringMapper::toDto)
+                    .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "count", responses.size(),
+                    "recurring", responses
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // 🔹 GET: Retrieve Summary (from insights table)
+    // ---------------------------------------------------------------------
+    @GetMapping("/summary")
+    public ResponseEntity<?> getSummary(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) Long accountId) {
+        try {
+            Long userId = extractUserIdFromJwt(authHeader);
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            InsightSummaryResponse summary;
+            if (accountId != null) {
+                BankAccount account = bankAccountRepository.findByIdAndUser(accountId, user)
+                        .orElseThrow(() -> new RuntimeException("Account not found or access denied"));
+                summary = insightService.getLatestSummaryByAccount(accountId);
+            } else {
+                summary = insightService.getLatestSummaryByUser(userId);
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "summary", summary
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
+    private AnomalyResponse toAnomalyResponse(AnomalyRecord anomaly) {
+        AnomalyResponse response = new AnomalyResponse();
+        response.setId(anomaly.getId());
+        response.setTransactionId(anomaly.getTransaction().getId());
+        response.setMerchant(anomaly.getTransaction().getMerchant());
+        response.setAmount(anomaly.getTransaction().getAmount());
+        response.setTransactionDate(anomaly.getTransaction().getDate());
+        response.setReason(anomaly.getReason());
+        response.setAnomalyType(anomaly.getAnomalyType());
+        response.setConfidence(anomaly.getConfidence());
+        response.setCreatedAt(anomaly.getCreatedAt());
+        return response;
     }
 }

@@ -1,7 +1,9 @@
 package com.Life_ledger.controller;
 
 import com.Life_ledger.dto.analytic.AnalyticsDTO;
+import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.User;
+import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
 import com.Life_ledger.service.AnalyticsService;
@@ -9,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -19,6 +22,7 @@ public class AnalyticsController {
     private final AnalyticsService analyticsService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final BankAccountRepository bankAccountRepository;
 
     private User getUserFromToken(String header) {
         if (header == null || !header.startsWith("Bearer ")) {
@@ -43,9 +47,19 @@ public class AnalyticsController {
             @RequestParam(required = false) Long accountId) {
         try {
             User user = getUserFromToken(token);
-            AnalyticsDTO analytics = accountId != null 
-                ? analyticsService.getLatestAnalyticsByAccount(accountId)
-                : analyticsService.getLatestAnalytics(user.getId());
+            AnalyticsDTO analytics;
+            
+            if (accountId != null) {
+                BankAccount account = bankAccountRepository.findByIdAndUser(accountId, user)
+                    .orElseThrow(() -> new RuntimeException("Account not found or access denied"));
+                analytics = analyticsService.getLatestAnalyticsByAccount(accountId);
+            } else {
+                List<BankAccount> userAccounts = bankAccountRepository.findByUserId(user.getId());
+                if (userAccounts.isEmpty()) {
+                    throw new RuntimeException("No bank accounts found for user");
+                }
+                analytics = analyticsService.getLatestAnalytics(user.getId());
+            }
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",

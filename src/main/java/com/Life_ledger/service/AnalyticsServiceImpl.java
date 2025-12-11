@@ -24,7 +24,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public DashboardResponseDTO getDashboard(Long userId, Long accountId) {
-
         List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
 
         return DashboardResponseDTO.builder()
@@ -37,9 +36,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .build();
     }
 
-    /* ---------------- MONTHLY TIMELINE ---------------- */
     private List<MonthlyInsightDto> buildMonthlyTimeline(List<Transaction> txns) {
-
         Map<String, Double> result = new LinkedHashMap<>();
         LocalDate now = LocalDate.now();
 
@@ -61,9 +58,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .toList();
     }
 
-    /* ---------------- CATEGORY BREAKDOWN ---------------- */
     private List<CategoryInsightDto> buildCategoryBreakdown(List<Transaction> txns) {
-
         Map<String, CategoryInsightDto> map = new HashMap<>();
 
         for (Transaction t : txns) {
@@ -83,7 +78,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .limit(6)
                 .toList();
 
-        // Assign colors so donut chart works
         for (int i = 0; i < sorted.size(); i++) {
             sorted.get(i).setColor(COLORS.get(i % COLORS.size()));
         }
@@ -91,9 +85,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         return sorted;
     }
 
-    /* ---------------- MERCHANT BREAKDOWN ---------------- */
     private List<MerchantInsightDto> buildMerchantBreakdown(List<Transaction> txns) {
-
         Map<String, MerchantInsightDto> map = new HashMap<>();
 
         for (Transaction t : txns) {
@@ -114,9 +106,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .toList();
     }
 
-    /* ---------------- RECURRING VS ONE-TIME ---------------- */
     private RecurringVsOneTimeDto buildRecurringSplit(List<Transaction> txns) {
-
         Map<String, Long> merchantFreq = txns.stream()
                 .collect(Collectors.groupingBy(Transaction::getMerchant, Collectors.counting()));
 
@@ -136,9 +126,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         return new RecurringVsOneTimeDto(recurringTotal, oneTimeTotal);
     }
 
-    /* ---------------- BURN RATE ---------------- */
     private BurnRateDto buildBurnRate(List<Transaction> txns) {
-
         LocalDate now = LocalDate.now();
         int month = now.getMonthValue();
         int year = now.getYear();
@@ -167,6 +155,22 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     @Override
     public AnalyticsDTO getLatestAnalytics(Long userId) {
         List<Transaction> txns = transactionRepository.findAllByUserId(userId);
+        
+        AnalyticsDTO analytics = new AnalyticsDTO();
+        analytics.setMonthlyTimeline(buildMonthlyTimelineData(txns));
+        analytics.setBurnRate(buildBurnRateData(txns));
+        analytics.setTopCategories(buildTopCategoriesData(txns));
+        analytics.setTopMerchants(buildTopMerchantsData(txns));
+        analytics.setSpendingTypes(buildSpendingTypesData(txns));
+        analytics.setAverages(buildAveragesData(txns));
+        analytics.setYearOverYear(buildYearOverYearData(txns));
+        
+        return analytics;
+    }
+
+    @Override
+    public AnalyticsDTO getLatestAnalyticsByAccount(Long accountId) {
+        List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
         
         AnalyticsDTO analytics = new AnalyticsDTO();
         analytics.setMonthlyTimeline(buildMonthlyTimelineData(txns));
@@ -239,10 +243,12 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     }
 
     private AnalyticsDTO.AveragesData buildAveragesData(List<Transaction> txns) {
-        double totalAmount = txns.stream().mapToDouble(t -> Math.abs(t.getAmount().doubleValue())).sum();
-        int days = 30;
+        double totalAmount = txns.stream()
+                .mapToDouble(t -> Math.abs(t.getAmount().doubleValue()))
+                .sum();
+        
         AnalyticsDTO.AveragesData data = new AnalyticsDTO.AveragesData();
-        data.setDailySpending(totalAmount / days);
+        data.setDailySpending(totalAmount / 30);
         data.setWeeklySpending(totalAmount / 4);
         data.setMonthlySpending(totalAmount);
         return data;
@@ -250,43 +256,50 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     private AnalyticsDTO.YearOverYearData buildYearOverYearData(List<Transaction> txns) {
         LocalDate now = LocalDate.now();
-        double currentYear = txns.stream()
-                .filter(t -> t.getDate().getYear() == now.getYear())
+        int currentYear = now.getYear();
+        int previousYear = currentYear - 1;
+        
+        double currentYearTotal = txns.stream()
+                .filter(t -> t.getDate().getYear() == currentYear)
                 .mapToDouble(t -> Math.abs(t.getAmount().doubleValue()))
                 .sum();
-        double previousYear = txns.stream()
-                .filter(t -> t.getDate().getYear() == now.getYear() - 1)
+                
+        double previousYearTotal = txns.stream()
+                .filter(t -> t.getDate().getYear() == previousYear)
                 .mapToDouble(t -> Math.abs(t.getAmount().doubleValue()))
                 .sum();
         
         AnalyticsDTO.YearOverYearData data = new AnalyticsDTO.YearOverYearData();
-        data.setCurrentYearTotal(currentYear);
-        data.setPreviousYearTotal(previousYear);
-        data.setChangePercentage(previousYear > 0 ? ((currentYear - previousYear) / previousYear) * 100 : 0);
-        data.setTrend(currentYear > previousYear ? "increasing" : "decreasing");
+        data.setCurrentYearTotal(currentYearTotal);
+        data.setPreviousYearTotal(previousYearTotal);
+        
+        if (previousYearTotal > 0) {
+            double change = ((currentYearTotal - previousYearTotal) / previousYearTotal) * 100;
+            data.setChangePercentage(change);
+            data.setTrend(change > 0 ? "increasing" : "decreasing");
+        } else {
+            data.setChangePercentage(0.0);
+            data.setTrend("stable");
+        }
+        
         return data;
     }
 
     @Override
     public DashboardStatsDto getDashboardStats(Long userId) {
-        List<Transaction> txns = transactionRepository.findAllByUserId(userId);
-        double totalSpent = txns.stream().mapToDouble(t -> Math.abs(t.getAmount().doubleValue())).sum();
-        
-        return DashboardStatsDto.builder()
-                .totalSpent(totalSpent)
-                .totalIncome(0.0)
-                .budgetLeft(0.0)
-                .transactionCount((long) txns.size())
-                .subscriptionCount(0L)
-                .savingsRate(0.0)
-                .build();
+        return new DashboardStatsDto();
+    }
+
+    @Override
+    public DashboardStatsDto getDashboardStatsByAccount(Long accountId) {
+        return new DashboardStatsDto();
     }
 
     @Override
     public List<CategoryInsightDto> getCategorySpending(Long userId, int days, Long accountId) {
         List<Transaction> txns = accountId != null 
-                ? transactionRepository.findAllByAccount(accountId)
-                : transactionRepository.findAllByUserId(userId);
+            ? transactionRepository.findAllByBankAccountId(accountId)
+            : transactionRepository.findAllByUserId(userId);
         return buildCategoryBreakdown(txns);
     }
 
@@ -294,37 +307,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     public List<MonthlyInsightDto> getMonthlySpending(Long userId, int months) {
         List<Transaction> txns = transactionRepository.findAllByUserId(userId);
         return buildMonthlyTimeline(txns);
-    }
-
-    @Override
-    public AnalyticsDTO getLatestAnalyticsByAccount(Long accountId) {
-        List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
-        
-        AnalyticsDTO analytics = new AnalyticsDTO();
-        analytics.setMonthlyTimeline(buildMonthlyTimelineData(txns));
-        analytics.setBurnRate(buildBurnRateData(txns));
-        analytics.setTopCategories(buildTopCategoriesData(txns));
-        analytics.setTopMerchants(buildTopMerchantsData(txns));
-        analytics.setSpendingTypes(buildSpendingTypesData(txns));
-        analytics.setAverages(buildAveragesData(txns));
-        analytics.setYearOverYear(buildYearOverYearData(txns));
-        
-        return analytics;
-    }
-
-    @Override
-    public DashboardStatsDto getDashboardStatsByAccount(Long accountId) {
-        List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
-        double totalSpent = txns.stream().mapToDouble(t -> Math.abs(t.getAmount().doubleValue())).sum();
-        
-        return DashboardStatsDto.builder()
-                .totalSpent(totalSpent)
-                .totalIncome(0.0)
-                .budgetLeft(0.0)
-                .transactionCount((long) txns.size())
-                .subscriptionCount(0L)
-                .savingsRate(0.0)
-                .build();
     }
 
     @Override

@@ -15,6 +15,7 @@ public interface AnomalyRecordRepository extends JpaRepository<AnomalyRecord, Lo
 
     List<AnomalyRecord> findByBankAccount_Id(Long bankAccountId);
     List<AnomalyRecord> findByTransaction_Id(Long transactionId);
+    List<AnomalyRecord> findByBankAccount_User_Id(Long userId);
     
     @Modifying
     @Transactional

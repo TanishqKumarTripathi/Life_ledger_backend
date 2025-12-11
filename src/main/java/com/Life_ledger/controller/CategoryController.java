@@ -36,13 +36,10 @@ public class CategoryController {
     @PostMapping
     public ResponseEntity<CategoryResponse> createCategory(
             @RequestHeader("Authorization") String token,
-            @RequestBody CategoryRequest request,
-            @RequestParam(required = false) Long accountId) {
+            @RequestBody CategoryRequest request) {
 
         User user = getUserFromToken(token);
-        CategoryResponse category = accountId != null 
-            ? categoryService.createCategoryForAccount(accountId, request)
-            : categoryService.createCategory(user.getId(), request);
+        CategoryResponse category = categoryService.createCategory(user.getId(), request);
         return ResponseEntity.ok(category);
     }
 
