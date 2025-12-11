@@ -2,8 +2,6 @@ package com.Life_ledger.dto.analytic;
 
 import lombok.Data;
 import java.util.List;
-import java.util.Map;
-
 @Data
 public class AnalyticsDTO {
     private List<MonthlyTimelineData> monthlyTimeline;
@@ -42,6 +40,7 @@ public class AnalyticsDTO {
         private Double amount;
         private Integer transactions;
         private String bankAccount;
+        private Double percentage;
     }
 
     @Data

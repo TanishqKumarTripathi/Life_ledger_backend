@@ -18,5 +18,6 @@ public class DashboardResponseDTO {
     private RecurringVsOneTimeDto recurringVsOneTime;
     private BurnRateDto burnRate;
 
-    private List<MonthlyInsightDto> yearOverYear;
+
+    private AnalyticsDTO.YearOverYearData yearOverYear;
 }
