@@ -8,14 +8,11 @@ import com.Life_ledger.entity.User;
 import com.Life_ledger.mapper.AccountMapper;
 import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.UserRepository;
-import com.Life_ledger.repository.TransactionRepository;
-import com.Life_ledger.repository.RecurringPatternRepository;
 
 import com.Life_ledger.util.EncryptionUtil;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,8 +23,8 @@ public class AccountServiceImpl implements AccountService {
 
     private final BankAccountRepository bankAccountRepository;
     private final UserRepository userRepository;
-    private final TransactionRepository transactionRepository;
-    private final RecurringPatternRepository recurringPatternRepository;
+    // private final TransactionRepository transactionRepository;
+    // private final RecurringPatternRepository recurringPatternRepository;
     private final EncryptionUtil encryptionUtil;
 
     @Override

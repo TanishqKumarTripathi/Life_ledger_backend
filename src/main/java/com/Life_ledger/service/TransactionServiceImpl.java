@@ -2,13 +2,16 @@ package com.Life_ledger.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+
+import com.Life_ledger.Enum.TransactionEnum;
 import com.Life_ledger.dto.transaction.*;
 import com.Life_ledger.dto.usercorrection.UserCorrectionRequest;
 import com.Life_ledger.dto.usercorrection.UserCorrectionResponse;
 import com.Life_ledger.entity.*;
 import com.Life_ledger.mapper.TransactionMapper;
 import com.Life_ledger.repository.*;
-import com.Life_ledger.service.TransactionService;
+import com.Life_ledger.util.TransactionFingerprintUtil;
+
 import org.springframework.data.domain.Sort;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +31,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final UserCorrectionRepository userCorrectionRepository;
     private final AnomalyRecordRepository anomalyRecordRepository;
     private final TransactionMapper transactionMapper;
+    private final TransactionFingerprintUtil transactionFingerprintUtil;
 
     private void checkUserOwnership(Long userId, BankAccount account) {
         if (!account.getUser().getId().equals(userId))
@@ -50,8 +54,16 @@ public class TransactionServiceImpl implements TransactionService {
                 .notes(request.getNotes())
                 .recurring(request.isRecurring())
                 .anomaly(request.isAnomaly())
+                .typeTransaction(request.getTypeTransaction()) // ✅ REQUIRED
                 .bankAccount(account)
                 .category(category)
+                .fingerprint(
+                        transactionFingerprintUtil.build(
+                                request.getDate(),
+                                request.getAmount(),
+                                TransactionEnum.DEBIT,
+                                request.getMerchant(),
+                                account.getId())) // ✅ REQUIRED
                 .build();
 
         Transaction saved = transactionRepository.save(txn);
@@ -72,7 +84,8 @@ public class TransactionServiceImpl implements TransactionService {
                 .filter(t -> t.getBankAccount() != null && t.getBankAccount().getUser() != null
                         && t.getBankAccount().getUser().getId().equals(userId))
                 .filter(t -> bankAccountId == null || t.getBankAccount().getId().equals(bankAccountId))
-                .filter(t -> categoryId == null || (t.getCategory() != null && t.getCategory().getId().equals(categoryId)))
+                .filter(t -> categoryId == null
+                        || (t.getCategory() != null && t.getCategory().getId().equals(categoryId)))
                 .map(transactionMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -144,8 +157,8 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public List<TransactionResponse> getRecurringTransactions(Long userId) {
-        return transactionRepository.findAll().stream().filter(t -> t.getBankAccount().getUser().getId().equals(userId)).
-        filter(Transaction::isRecurring)
+        return transactionRepository.findAll().stream().filter(t -> t.getBankAccount().getUser().getId().equals(userId))
+                .filter(Transaction::isRecurring)
                 .map(transactionMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -257,6 +270,14 @@ public class TransactionServiceImpl implements TransactionService {
 
         return transactionRepository
                 .findByBankAccount_User_Id(userId, sort)
+                .stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+    }
+
+    public List<TransactionResponse> getByBankAccount(Long bankAccountId, int month, int year) {
+        return transactionRepository
+                .findByBankAccountAndMonth(bankAccountId, month, year)
                 .stream()
                 .map(transactionMapper::toResponse)
                 .toList();

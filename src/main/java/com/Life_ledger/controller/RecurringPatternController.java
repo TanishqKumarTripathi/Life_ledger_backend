@@ -7,11 +7,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.Life_ledger.dto.recurring.RecurringResponseDto;
-import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.RecurringPattern;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.mapper.Recurringmapper;
-import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.RecurringPatternRepository;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
@@ -24,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 public class RecurringPatternController {
 
     private final RecurringPatternRepository recurringPatternRepository;
-    private final BankAccountRepository bankAccountRepository;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final Recurringmapper recurringMapper;

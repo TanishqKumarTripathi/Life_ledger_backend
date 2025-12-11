@@ -2,20 +2,11 @@ package com.Life_ledger.service;
 
 import com.Life_ledger.dto.auth.LoginRequest;
 import com.Life_ledger.dto.auth.SignupRequest;
-import com.Life_ledger.dto.category.CategoryResponse;
-import com.Life_ledger.dto.goals.GoalResponse;
 import com.Life_ledger.dto.user.UserInfoDto;
 import com.Life_ledger.dto.user.UserResponse;
-import com.Life_ledger.dto.account.AccountResponse;
 import com.Life_ledger.dto.auth.AuthResponse;
 import com.Life_ledger.entity.User;
-import com.Life_ledger.mapper.AccountMapper;
-import com.Life_ledger.mapper.CategoryMapper;
-import com.Life_ledger.mapper.GoalMapper;
 import com.Life_ledger.mapper.UserMapper;
-import com.Life_ledger.repository.BankAccountRepository;
-import com.Life_ledger.repository.CategoryRepository;
-import com.Life_ledger.repository.GoalRepository;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
 import com.cloudinary.Cloudinary;
@@ -27,9 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -39,10 +28,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final Cloudinary cloudinary;
-    private final BankAccountRepository bankAccountRepository;
-    private final CategoryRepository categoryRepository;
     // private final TransactionRepository transactionRepository;
-    private final GoalRepository goalRepository;
     // private final TransactionMapper transactionMapper;
 
     @Override
@@ -137,42 +123,44 @@ public class UserServiceImpl implements UserService {
         return null;
     }
 
-//    @Override
-//    public UserInfoDto getFullUserInfo(Long userId) {
-//
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new RuntimeException("Invalid user"));
-//
-//        List<AccountResponse> accounts = bankAccountRepository.findAllByUserId(userId)
-//                .stream()
-//                .map(AccountMapper::toResponse)
-//                .collect(Collectors.toList());
-//
-//        List<CategoryResponse> categories = categoryRepository.findAllByUser_Id(userId)
-//                .stream()
-//                .map(CategoryMapper::toResponse)
-//                .collect(Collectors.toList());
-//
-//        // TransactionMapper transactionMapper = new TransactionMapper();
-//        // List<TransactionResponse> transactions =
-//        // transactionRepository.findAllByBankAccount_User_Id(userId)
-//        // .stream()
-//        // .map(transactionMapper::toResponse)
-//        // .collect(Collectors.toList());
-//
-//        List<GoalResponse> goals = goalRepository.findByUser(user)
-//                .stream()
-//                .map(GoalMapper::toDto)
-//                .collect(Collectors.toList());
-//
-//        return UserInfoDto.builder()
-//                .id(user.getId())
-//                .name(user.getName())
-//                .email(user.getEmail())
-//                .accounts(accounts)
-//                .categories(categories)
-//                // .transactions(transactions)
-//                .goals(goals)
-//                .build();
-//    }
+    // @Override
+    // public UserInfoDto getFullUserInfo(Long userId) {
+    //
+    // User user = userRepository.findById(userId)
+    // .orElseThrow(() -> new RuntimeException("Invalid user"));
+    //
+    // List<AccountResponse> accounts =
+    // bankAccountRepository.findAllByUserId(userId)
+    // .stream()
+    // .map(AccountMapper::toResponse)
+    // .collect(Collectors.toList());
+    //
+    // List<CategoryResponse> categories =
+    // categoryRepository.findAllByUser_Id(userId)
+    // .stream()
+    // .map(CategoryMapper::toResponse)
+    // .collect(Collectors.toList());
+    //
+    // // TransactionMapper transactionMapper = new TransactionMapper();
+    // // List<TransactionResponse> transactions =
+    // // transactionRepository.findAllByBankAccount_User_Id(userId)
+    // // .stream()
+    // // .map(transactionMapper::toResponse)
+    // // .collect(Collectors.toList());
+    //
+    // List<GoalResponse> goals = goalRepository.findByUser(user)
+    // .stream()
+    // .map(GoalMapper::toDto)
+    // .collect(Collectors.toList());
+    //
+    // return UserInfoDto.builder()
+    // .id(user.getId())
+    // .name(user.getName())
+    // .email(user.getEmail())
+    // .accounts(accounts)
+    // .categories(categories)
+    // // .transactions(transactions)
+    // .goals(goals)
+    // .build();
+    // }
 }

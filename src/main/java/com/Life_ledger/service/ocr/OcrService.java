@@ -3,7 +3,6 @@ package com.Life_ledger.service.ocr;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 

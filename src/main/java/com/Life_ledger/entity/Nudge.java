@@ -5,7 +5,11 @@ import com.Life_ledger.Enum.NudgeType;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "nudges")
@@ -37,7 +41,8 @@ public class Nudge {
     private boolean read;
 
     @ManyToOne
-    @JoinColumn(name = "goal_id")
+    @JoinColumn(name = "goal_id", foreignKey = @ForeignKey(name = "fk_nudge_goal"))
+    @OnDelete(action = OnDeleteAction.CASCADE) // <-- important
     private Goal goal;
 
     @ManyToOne
@@ -50,4 +55,20 @@ public class Nudge {
             createdAt = LocalDateTime.now();
         }
     }
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal spendAmount;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal targetAmount;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal remainingAmount;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal exceededAmount;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal progressPercent;
+
 }

@@ -6,8 +6,6 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-import com.Life_ledger.Enum.GoalType;
-
 @Data
 public class GoalRequest {
     private Long userId;

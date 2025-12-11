@@ -4,10 +4,12 @@ import com.Life_ledger.Enum.GoalStatus;
 import com.Life_ledger.Enum.GoalType;
 import com.Life_ledger.dto.goals.GoalRequest;
 import com.Life_ledger.dto.goals.GoalResponse;
+import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.Goal;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.exception.AppException;
 import com.Life_ledger.mapper.GoalMapper;
+import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.GoalRepository;
 import com.Life_ledger.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class GoalServiceImpl implements GoalService {
     private final GoalRepository goalRepository;
     private final UserRepository userRepository;
     private final GoalMapper goalMapper;
+    private final BankAccountRepository bankAccountRepository;
 
     @Override
     public GoalResponse createGoal(GoalRequest req) {
@@ -181,10 +184,6 @@ public class GoalServiceImpl implements GoalService {
 
     private void normalizeDates(Goal goal) {
 
-        if (goal.getStartDate() == null) {
-            goal.setStartDate(LocalDate.now());
-        }
-
         if ((goal.getType() == GoalType.SPENDINGCAP
                 || goal.getType() == GoalType.BUDGET)
                 && goal.getDeadline() == null) {
@@ -194,6 +193,32 @@ public class GoalServiceImpl implements GoalService {
                     goal.getStartDate()
                             .withDayOfMonth(goal.getStartDate().lengthOfMonth()));
         }
+    }
+
+    @Override
+    public void deleteAllGoalsByUser(Long userId) {
+        List<Goal> goals = goalRepository.findByUserId(userId);
+        if (!goals.isEmpty()) {
+            goalRepository.deleteAll(goals);
+        }
+    }
+
+    @Override
+    public void deleteAllGoalsByAccount(Long userId, Long accountId) {
+
+        // ensure user owns this account
+        BankAccount acc = bankAccountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Bank account not found"));
+
+        if (!acc.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized: You do not own this account");
+        }
+
+        List<Goal> goals = goalRepository.findByBankAccountId(accountId);
+        if (!goals.isEmpty()) {
+            goalRepository.deleteAll(goals);
+        }
+
     }
 
 }

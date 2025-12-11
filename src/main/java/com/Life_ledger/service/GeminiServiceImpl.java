@@ -317,25 +317,25 @@ public class GeminiServiceImpl implements GeminiService {
     // --------------------
     // Gemini call + retry + extraction
     // --------------------
-    private JsonNode callGeminiWithRetry(String prompt) throws Exception {
-        int maxRetries = 3;
-        int backoff = 3000;
-        Exception lastEx = null;
-        for (int attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                return callGemini(prompt);
-            } catch (Exception ex) {
-                lastEx = ex;
-                String m = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
-                if (m.contains("429") || m.contains("503")) {
-                    Thread.sleep(backoff);
-                    continue;
-                } else
-                    throw ex;
-            }
-        }
-        throw new RuntimeException("Gemini failed after retries", lastEx);
-    }
+    // private JsonNode callGeminiWithRetry(String prompt) throws Exception {
+    // int maxRetries = 3;
+    // int backoff = 3000;
+    // Exception lastEx = null;
+    // for (int attempt = 1; attempt <= maxRetries; attempt++) {
+    // try {
+    // return callGemini(prompt);
+    // } catch (Exception ex) {
+    // lastEx = ex;
+    // String m = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
+    // if (m.contains("429") || m.contains("503")) {
+    // Thread.sleep(backoff);
+    // continue;
+    // } else
+    // throw ex;
+    // }
+    // }
+    // throw new RuntimeException("Gemini failed after retries", lastEx);
+    // }
 
     private static final Object GEMINI_LOCK = new Object();
 
@@ -446,21 +446,21 @@ public class GeminiServiceImpl implements GeminiService {
         String rulesJson = objectMapper.writeValueAsString(compactRules);
 
         return """
-                            STRICT RULES:
-                            - Output ONLY valid JSON
-                            - No markdown
-                            - No explanations
-                            - No extra text
-                            - Omit unknown fields
+                STRICT RULES:
+                - Output ONLY valid JSON
+                - No markdown
+                - No explanations
+                - No extra text
+                - Omit unknown fields
 
-                                You are LifeLedger's Categorization engine. Use the USER RULES first, then AI fallback.
-                                Output STRICT JSON only with this shape:
-                                {
-                                  "categorized": [
-                                    { "id": 0, "type": "debit|credit", "category":"string", "subCategory":"string","date":"string" }
-                                  ]
-                                }
-                                """
+                    You are LifeLedger's Categorization engine. Use the USER RULES first, then AI fallback.
+                    Output STRICT JSON only with this shape:
+                    {
+                      "categorized": [
+                        { "id": 0, "type": "debit|credit", "category":"string", "subCategory":"string","date":"string" }
+                      ]
+                    }
+                    """
                 + rulesJson + "\n\nTRANSACTIONS:\n" + txJson;
     }
 

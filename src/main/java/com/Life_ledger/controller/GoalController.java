@@ -31,9 +31,9 @@ public class GoalController {
             @RequestParam(required = false) Long accountId) {
         Long userId = getUserIdFromToken(token);
         request.setUserId(userId);
-        GoalResponse goal = accountId != null 
-            ? goalService.createGoalForAccount(request, accountId)
-            : goalService.createGoal(request);
+        GoalResponse goal = accountId != null
+                ? goalService.createGoalForAccount(request, accountId)
+                : goalService.createGoal(request);
         return ResponseEntity.ok(goal);
     }
 
@@ -42,9 +42,9 @@ public class GoalController {
             @RequestHeader("Authorization") String token,
             @RequestParam(required = false) Long accountId) {
         Long userId = getUserIdFromToken(token);
-        List<GoalResponse> goals = accountId != null 
-            ? goalService.getGoalsByAccount(accountId)
-            : goalService.getGoalsByUser(userId);
+        List<GoalResponse> goals = accountId != null
+                ? goalService.getGoalsByAccount(accountId)
+                : goalService.getGoalsByUser(userId);
         return ResponseEntity.ok(goals);
     }
 
@@ -98,4 +98,23 @@ public class GoalController {
                 .orElseThrow(() -> new RuntimeException("Invalid user"));
         return user.getId();
     }
+
+    @DeleteMapping("/all")
+    public ResponseEntity<Map<String, String>> deleteAllGoals(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(required = false) Long accountId) {
+
+        Long userId = getUserIdFromToken(token);
+
+        if (accountId != null) {
+            // Delete goals for a specific bank account
+            goalService.deleteAllGoalsByAccount(userId, accountId);
+            return ResponseEntity.ok(Map.of("message", "All goals for account deleted successfully"));
+        }
+
+        // Delete ALL user goals
+        goalService.deleteAllGoalsByUser(userId);
+        return ResponseEntity.ok(Map.of("message", "All goals deleted successfully"));
+    }
+
 }
