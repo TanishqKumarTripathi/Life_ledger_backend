@@ -25,5 +25,7 @@ public interface InsightRepository extends JpaRepository<Insight, Long> {
             InsightType type);
 
     List<Insight> findByBankAccount_User_Id(Long userId);
+    
+    void deleteByBankAccount_Id(Long bankAccountId);
 
 }

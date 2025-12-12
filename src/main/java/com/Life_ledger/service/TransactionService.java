@@ -27,7 +27,9 @@ public interface TransactionService {
     List<TransactionResponse> getRecurringTransactions(Long userId);
 
     List<TransactionResponse> getAnomalyTransactions(Long userId);
+
     BigDecimal getTotalSpent(Long userId, LocalDate startDate, LocalDate endDate);
+
     BigDecimal getTransactionCount(Long userId);
 
     List<TransactionResponse> getRecentTransactions(Long userId);
@@ -41,4 +43,5 @@ public interface TransactionService {
             String sortBy,
             String direction);
 
+    List<TransactionResponse> getByBankAccount(Long bankAccountId, int month, int year);
 }

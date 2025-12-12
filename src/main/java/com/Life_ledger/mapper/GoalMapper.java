@@ -20,7 +20,7 @@ public class GoalMapper {
                 .targetAmount(req.getTargetAmount())
                 .currentAmount(BigDecimal.ZERO)
                 .category(req.getCategory())
-                .startDate(LocalDate.now())
+                .startDate(req.getStartDate())
                 .deadline(req.getDeadline())
                 .type(req.getType()) // ✅ FIX
                 .status(GoalStatus.ACTIVE)

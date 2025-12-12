@@ -40,7 +40,7 @@ public class AnalyticsDTO {
         private Double amount;
         private Integer transactions;
         private String bankAccount;
-        private Double percentage;
+        private double percentage;
     }
 
     @Data

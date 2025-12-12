@@ -1,6 +1,5 @@
 package com.Life_ledger.service;
 
-import java.io.IOException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;

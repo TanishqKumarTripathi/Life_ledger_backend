@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 public class AnalyticsServiceImpl implements AnalyticsService {
 
     private final TransactionRepository transactionRepository;
+    private final TransactionNormalizationService normalizationService;
 
     private static final List<String> COLORS = List.of(
             "#3B82F6", "#10B981", "#F59E0B", "#EF4444",
@@ -29,7 +30,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public DashboardResponseDTO getDashboard(Long userId, Long accountId) {
-        List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
+        List<Transaction> rawTxns = transactionRepository.findAllByBankAccountId(accountId);
+        List<NormalizedTransaction> txns = normalizationService.normalizeTransactions(rawTxns);
 
         return DashboardResponseDTO.builder()
                 .monthlyTimeline(buildMonthlyTimeline(txns))
@@ -43,7 +45,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public AnalyticsDTO getLatestAnalytics(Long userId) {
-        List<Transaction> txns = transactionRepository.findAllByUserId(userId);
+        List<Transaction> rawTxns = transactionRepository.findAllByUserId(userId);
+        List<NormalizedTransaction> txns = normalizationService.normalizeTransactions(rawTxns);
 
         AnalyticsDTO analytics = new AnalyticsDTO();
         analytics.setMonthlyTimeline(buildMonthlyTimelineData(txns));
@@ -59,7 +62,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public AnalyticsDTO getLatestAnalyticsByAccount(Long accountId) {
-        List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
+        List<Transaction> rawTxns = transactionRepository.findAllByBankAccountId(accountId);
+        List<NormalizedTransaction> txns = normalizationService.normalizeTransactions(rawTxns);
 
         AnalyticsDTO analytics = new AnalyticsDTO();
         analytics.setMonthlyTimeline(buildMonthlyTimelineData(txns));
@@ -85,67 +89,32 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public List<CategoryInsightDto> getCategorySpending(Long userId, int days, Long accountId) {
-        List<Transaction> txns = accountId != null
+        List<Transaction> rawTxns = accountId != null
                 ? transactionRepository.findAllByBankAccountId(accountId)
                 : transactionRepository.findAllByUserId(userId);
+        List<NormalizedTransaction> txns = normalizationService.normalizeTransactions(rawTxns);
         return buildCategoryBreakdown(txns);
     }
 
     @Override
     public List<MonthlyInsightDto> getMonthlySpending(Long userId, int months) {
-        List<Transaction> txns = transactionRepository.findAllByUserId(userId);
+        List<Transaction> rawTxns = transactionRepository.findAllByUserId(userId);
+        List<NormalizedTransaction> txns = normalizationService.normalizeTransactions(rawTxns);
         return buildMonthlyTimeline(txns);
     }
 
     @Override
     public List<MonthlyInsightDto> getMonthlySpendingByAccount(Long accountId, int months) {
-        List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
+        List<Transaction> rawTxns = transactionRepository.findAllByBankAccountId(accountId);
+        List<NormalizedTransaction> txns = normalizationService.normalizeTransactions(rawTxns);
         return buildMonthlyTimeline(txns);
     }
 
-    // ---------------------- Core helpers & fixes -------------------------------
-
-    /**
-     * Decide whether a transaction is a debit (spend).
-     *
-     * IMPORTANT: This implementation assumes debits are stored as negative amounts.
-     * If your model stores debits as positive values and credits as negative, invert this logic.
-     */
-    private boolean isDebit(Transaction t) {
-        if (t == null || t.getAmount() == null) return false;
-        return t.getAmount().doubleValue() < 0;
-    }
-
-    /**
-     * Normalizes merchant strings so similar merchants group together.
-     */
-    private String cleanMerchantName(String raw) {
-        if (raw == null || raw.isBlank()) return "Unknown";
-        String s = raw.toUpperCase().trim();
-
-        // remove common tokens
-        s = s.replaceAll("UPI[-_ ]?", "");
-        s = s.replaceAll("PAYTM|PTYS|PTYBL|PAYAXIS|HDFCBANK|YESB0PTM|YESB0YBL|UTIB|OKAXIS|ICICI|AXISBANK", "");
-        s = s.replaceAll("[^A-Z0-9 @.&]", " "); // keep letters/digits/spaces/@
-        s = s.replaceAll("\\s{2,}", " ").trim();
-
-        // If it contains an obvious merchant name, try to extract it
-        if (s.contains("ZOMATO")) return "Zomato";
-        if (s.contains("IRCTC") || s.contains("RAIL")) return "IRCTC";
-        if (s.contains("GOOGLE") || s.contains("PLAYSTORE") || s.contains("GPAY")) return "Google Play";
-        if (s.contains("AMAZON")) return "Amazon";
-        if (s.contains("BURGER") || s.contains("RESTAUR")) return "Restaurant";
-        if (s.length() > 20) {
-            // take first token if too long
-            return s.split(" ")[0];
-        }
-        return s;
-    }
+    // ---------------------- Core helpers -------------------------------
 
     // ---------------------- Monthly timeline -------------------------------
 
-    private List<MonthlyInsightDto> buildMonthlyTimeline(List<Transaction> txns) {
-        // We'll produce last 12 months timeline but count only DEBITS as spending.
+    private List<MonthlyInsightDto> buildMonthlyTimeline(List<NormalizedTransaction> txns) {
         LocalDate now = LocalDate.now();
         Map<YearMonth, Double> monthly = new LinkedHashMap<>();
 
@@ -155,13 +124,13 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         }
 
         txns.stream()
-                .filter(this::isDebit)
+                .filter(NormalizedTransaction::isExpense)
                 .forEach(t -> {
                     LocalDate d = t.getDate();
                     if (d == null) return;
                     YearMonth ym = YearMonth.from(d);
                     if (monthly.containsKey(ym)) {
-                        monthly.put(ym, monthly.getOrDefault(ym, 0.0) + Math.abs(t.getAmount().doubleValue()));
+                        monthly.put(ym, monthly.getOrDefault(ym, 0.0) + t.getSignedAmount().abs().doubleValue());
                     }
                 });
 
@@ -172,18 +141,16 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     // ---------------------- Category breakdown -------------------------------
 
-    private List<CategoryInsightDto> buildCategoryBreakdown(List<Transaction> txns) {
+    private List<CategoryInsightDto> buildCategoryBreakdown(List<NormalizedTransaction> txns) {
         Map<String, CategoryInsightDto> map = new HashMap<>();
 
         txns.stream()
-                .filter(this::isDebit)
+                .filter(NormalizedTransaction::isExpense)
                 .forEach(t -> {
-                    String category = (t.getCategory() != null && t.getCategory().getName() != null)
-                            ? t.getCategory().getName()
-                            : "Uncategorized";
+                    String category = t.getCategory() != null ? t.getCategory() : "Uncategorized";
 
                     CategoryInsightDto dto = map.computeIfAbsent(category, k -> new CategoryInsightDto(k, 0, 0, null));
-                    dto.setAmount(dto.getAmount() + Math.abs(t.getAmount().doubleValue()));
+                    dto.setAmount(dto.getAmount() + t.getSignedAmount().abs().doubleValue());
                     dto.setCount(dto.getCount() + 1);
                 });
 
@@ -201,18 +168,17 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     // ---------------------- Merchant breakdown -------------------------------
 
-    private List<MerchantInsightDto> buildMerchantBreakdown(List<Transaction> txns) {
+    private List<MerchantInsightDto> buildMerchantBreakdown(List<NormalizedTransaction> txns) {
         Map<String, MerchantInsightDto> map = new HashMap<>();
 
         txns.stream()
-                .filter(this::isDebit) // only count spends
+                .filter(NormalizedTransaction::isExpense)
                 .forEach(t -> {
-                    String rawMerchant = t.getMerchant();
-                    String merchant = cleanMerchantName(rawMerchant);
+                    String merchant = t.getCleanMerchant();
 
                     map.putIfAbsent(merchant, new MerchantInsightDto(merchant, 0, 0));
                     MerchantInsightDto dto = map.get(merchant);
-                    dto.setAmount(dto.getAmount() + Math.abs(t.getAmount().doubleValue()));
+                    dto.setAmount(dto.getAmount() + t.getSignedAmount().abs().doubleValue());
                     dto.setCount(dto.getCount() + 1);
                 });
 
@@ -224,52 +190,39 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     // ---------------------- Recurring vs One-time -------------------------------
 
-    private RecurringVsOneTimeDto buildRecurringSplit(List<Transaction> txns) {
-        // Group by normalized merchant (only DEBITS)
-        Map<String, Long> merchantFreq = txns.stream()
-                .filter(this::isDebit)
-                .map(t -> cleanMerchantName(t.getMerchant()))
-                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+    private RecurringVsOneTimeDto buildRecurringSplit(List<NormalizedTransaction> txns) {
+        double recurringTotal = txns.stream()
+                .filter(NormalizedTransaction::isExpense)
+                .filter(NormalizedTransaction::isRecurring)
+                .mapToDouble(t -> t.getSignedAmount().abs().doubleValue())
+                .sum();
 
-        double recurringTotal = 0;
-        double oneTimeTotal = 0;
-
-        for (Transaction t : txns) {
-            if (!isDebit(t)) continue;
-            String merchant = cleanMerchantName(t.getMerchant());
-            long count = merchantFreq.getOrDefault(merchant, 1L);
-            double amt = Math.abs(t.getAmount().doubleValue());
-
-            // treat merchant with >= 3 occurrences as recurring
-            if (count >= 3) recurringTotal += amt;
-            else oneTimeTotal += amt;
-        }
+        double oneTimeTotal = txns.stream()
+                .filter(NormalizedTransaction::isExpense)
+                .filter(t -> !t.isRecurring())
+                .mapToDouble(t -> t.getSignedAmount().abs().doubleValue())
+                .sum();
 
         return new RecurringVsOneTimeDto(recurringTotal, oneTimeTotal);
     }
 
     // ---------------------- Burn rate (last 30 days) -------------------------------
 
-    private BurnRateDto buildBurnRate(List<Transaction> txns) {
+    private BurnRateDto buildBurnRate(List<NormalizedTransaction> txns) {
         LocalDate now = LocalDate.now();
-        LocalDate start = now.minusDays(29); // last 30 days inclusive
+        LocalDate start = now.minusDays(29);
 
-        List<Transaction> last30 = txns.stream()
-                .filter(this::isDebit)
+        double totalLast30 = txns.stream()
+                .filter(NormalizedTransaction::isExpense)
                 .filter(t -> {
                     LocalDate d = t.getDate();
                     return d != null && (!d.isBefore(start) && !d.isAfter(now));
                 })
-                .toList();
-
-        double totalLast30 = last30.stream()
-                .mapToDouble(t -> Math.abs(t.getAmount().doubleValue()))
+                .mapToDouble(t -> t.getSignedAmount().abs().doubleValue())
                 .sum();
 
         double daily = totalLast30 / 30.0;
         double projected = daily * 30.0;
-
-        // days left in current month (useful if you want calendar projected)
         int daysLeft = now.lengthOfMonth() - now.getDayOfMonth();
 
         return BurnRateDto.builder()
@@ -282,30 +235,30 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     // ---------------------- Analytics DTO builders (adapted) -------------------------------
 
-    private List<AnalyticsDTO.MonthlyTimelineData> buildMonthlyTimelineData(List<Transaction> txns) {
+    private List<AnalyticsDTO.MonthlyTimelineData> buildMonthlyTimelineData(List<NormalizedTransaction> txns) {
         return buildMonthlyTimeline(txns).stream()
                 .map(m -> {
                     AnalyticsDTO.MonthlyTimelineData data = new AnalyticsDTO.MonthlyTimelineData();
                     data.setMonth(m.getMonth());
                     data.setExpenses(m.getAmount());
-                    data.setIncome(0.0);   // income extraction can be added similarly if needed
+                    data.setIncome(0.0);
                     data.setSavings(0.0);
                     return data;
                 })
                 .toList();
     }
 
-    private AnalyticsDTO.BurnRateData buildBurnRateData(List<Transaction> txns) {
+    private AnalyticsDTO.BurnRateData buildBurnRateData(List<NormalizedTransaction> txns) {
         BurnRateDto burnRate = buildBurnRate(txns);
         AnalyticsDTO.BurnRateData data = new AnalyticsDTO.BurnRateData();
         data.setCurrentRate(burnRate.getDaily());
-        data.setTrend("stable"); // you can compute trend over time if desired
+        data.setTrend("stable");
         data.setDaysToZero((int) burnRate.getDaysLeft());
         return data;
     }
 
-    private List<AnalyticsDTO.CategoryData> buildTopCategoriesData(List<Transaction> txns) {
-        double total = txns.stream().filter(this::isDebit).mapToDouble(t -> Math.abs(t.getAmount().doubleValue())).sum();
+    private List<AnalyticsDTO.CategoryData> buildTopCategoriesData(List<NormalizedTransaction> txns) {
+        double total = txns.stream().filter(NormalizedTransaction::isExpense).mapToDouble(t -> t.getSignedAmount().abs().doubleValue()).sum();
         return buildCategoryBreakdown(txns).stream()
                 .map(c -> {
                     AnalyticsDTO.CategoryData data = new AnalyticsDTO.CategoryData();
@@ -317,8 +270,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .toList();
     }
 
-    private List<AnalyticsDTO.MerchantData> buildTopMerchantsData(List<Transaction> txns) {
-        double total = txns.stream().filter(this::isDebit).mapToDouble(t -> Math.abs(t.getAmount().doubleValue())).sum();
+    private List<AnalyticsDTO.MerchantData> buildTopMerchantsData(List<NormalizedTransaction> txns) {
+        double total = txns.stream().filter(NormalizedTransaction::isExpense).mapToDouble(t -> t.getSignedAmount().abs().doubleValue()).sum();
         return buildMerchantBreakdown(txns).stream()
                 .map(m -> {
                     AnalyticsDTO.MerchantData data = new AnalyticsDTO.MerchantData();
@@ -332,7 +285,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .toList();
     }
 
-    private AnalyticsDTO.SpendingTypeData buildSpendingTypesData(List<Transaction> txns) {
+    private AnalyticsDTO.SpendingTypeData buildSpendingTypesData(List<NormalizedTransaction> txns) {
         RecurringVsOneTimeDto split = buildRecurringSplit(txns);
         AnalyticsDTO.SpendingTypeData data = new AnalyticsDTO.SpendingTypeData();
         data.setRecurring(split.getRecurring());
@@ -343,11 +296,10 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         return data;
     }
 
-    private AnalyticsDTO.AveragesData buildAveragesData(List<Transaction> txns) {
-        // Compute totals and actual period length (in days) from transaction dates
-        List<Transaction> debits = txns.stream().filter(this::isDebit).toList();
+    private AnalyticsDTO.AveragesData buildAveragesData(List<NormalizedTransaction> txns) {
+        List<NormalizedTransaction> expenses = txns.stream().filter(NormalizedTransaction::isExpense).toList();
 
-        if (debits.isEmpty()) {
+        if (expenses.isEmpty()) {
             AnalyticsDTO.AveragesData data = new AnalyticsDTO.AveragesData();
             data.setDailySpending(0.0);
             data.setWeeklySpending(0.0);
@@ -355,13 +307,13 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             return data;
         }
 
-        LocalDate minDate = debits.stream().map(Transaction::getDate).filter(Objects::nonNull).min(LocalDate::compareTo).orElse(LocalDate.now());
-        LocalDate maxDate = debits.stream().map(Transaction::getDate).filter(Objects::nonNull).max(LocalDate::compareTo).orElse(LocalDate.now());
+        LocalDate minDate = expenses.stream().map(NormalizedTransaction::getDate).filter(Objects::nonNull).min(LocalDate::compareTo).orElse(LocalDate.now());
+        LocalDate maxDate = expenses.stream().map(NormalizedTransaction::getDate).filter(Objects::nonNull).max(LocalDate::compareTo).orElse(LocalDate.now());
 
         long days = ChronoUnit.DAYS.between(minDate, maxDate) + 1;
         if (days <= 0) days = 1;
 
-        double totalAmount = debits.stream().mapToDouble(t -> Math.abs(t.getAmount().doubleValue())).sum();
+        double totalAmount = expenses.stream().mapToDouble(t -> t.getSignedAmount().abs().doubleValue()).sum();
 
         double daily = totalAmount / (double) days;
         double weekly = daily * 7.0;
@@ -374,21 +326,21 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         return data;
     }
 
-    private AnalyticsDTO.YearOverYearData buildYearOverYearData(List<Transaction> txns) {
+    private AnalyticsDTO.YearOverYearData buildYearOverYearData(List<NormalizedTransaction> txns) {
         LocalDate now = LocalDate.now();
         int currentYear = now.getYear();
         int previousYear = currentYear - 1;
 
         double currentYearTotal = txns.stream()
-                .filter(this::isDebit)
+                .filter(NormalizedTransaction::isExpense)
                 .filter(t -> t.getDate() != null && t.getDate().getYear() == currentYear)
-                .mapToDouble(t -> Math.abs(t.getAmount().doubleValue()))
+                .mapToDouble(t -> t.getSignedAmount().abs().doubleValue())
                 .sum();
 
         double previousYearTotal = txns.stream()
-                .filter(this::isDebit)
+                .filter(NormalizedTransaction::isExpense)
                 .filter(t -> t.getDate() != null && t.getDate().getYear() == previousYear)
-                .mapToDouble(t -> Math.abs(t.getAmount().doubleValue()))
+                .mapToDouble(t -> t.getSignedAmount().abs().doubleValue())
                 .sum();
 
         AnalyticsDTO.YearOverYearData data = new AnalyticsDTO.YearOverYearData();
@@ -401,7 +353,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             data.setTrend(change > 0 ? "increasing" : "decreasing");
         } else {
             data.setChangePercentage(0.0);
-            data.setTrend("stable"); // no prior-year data to compare
+            data.setTrend("stable");
         }
 
         return data;
