@@ -39,9 +39,6 @@ public class AnalyticsController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    // --------------------------------------------------------
-    //   Single endpoint to fetch ANALYTICS
-    // --------------------------------------------------------
     @GetMapping("/latest")
     public ResponseEntity<?> getLatestAnalytics(
             @RequestHeader("Authorization") String token,
@@ -62,9 +59,6 @@ public class AnalyticsController {
                 analytics = analyticsService.getLatestAnalyticsByAccount(account.getId());
             }
 
-            // ----------------------------------------------
-            // No accountId → compute analytics for ALL ACCOUNTS of user
-            // ----------------------------------------------
             else {
                 List<BankAccount> accounts = bankAccountRepository.findByUserId(user.getId());
                 if (accounts.isEmpty())
