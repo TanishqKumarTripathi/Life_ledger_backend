@@ -6,6 +6,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import com.Life_ledger.Enum.CategorySource;
 import com.Life_ledger.Enum.TransactionEnum;
 
@@ -53,10 +56,12 @@ public class Transaction {
 
     @ManyToOne
     @JoinColumn(name = "category_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Category category;
 
     @ManyToOne
     @JoinColumn(name = "sub_category_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private SubCategory subCategory;
 
     @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)

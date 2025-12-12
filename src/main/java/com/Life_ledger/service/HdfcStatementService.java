@@ -113,17 +113,35 @@ public class HdfcStatementService {
                             ? TransactionEnum.CREDIT
                             : TransactionEnum.DEBIT;
 
-                    // 3️⃣ Build fingerprint using shared util
-                    String fingerprint = fingerprintUtil.build(
-                            date,
-                            amount,
-                            txnType,
-                            rawDescription,
+                    String normalizedDesc = rawDescription.trim().toLowerCase().replaceAll("\\s+", " ");
+
+                    // -----------------------------------------------------
+                    // CREATE FINGERPRINT (UNIQUE TRANSACTION ID)
+                    // -----------------------------------------------------
+                    String fingerprint = t.get("date") + "|"
+                            + t.get("amount") + "|"
+                            + t.get("type") + "|"
+                            + normalizedDesc + "|"
+                            + reference + "|"
+                            + bankAccount.getId();
+
+                    // -----------------------------------------------------
+                    // DUPLICATE CHECK
+                    // -----------------------------------------------------
+                    boolean exists = transactionRepo.existsByFingerprintAndBankAccountId(fingerprint,
                             bankAccount.getId());
 
-                    boolean exists = transactionRepo.existsByFingerprintAndBankAccountId(
-                            fingerprint,
-                            bankAccount.getId());
+                    // 3️⃣ Build fingerprint using shared util
+                    // String fingerprint = t.get("date") + "|"
+                    // + t.get("amount") + "|"
+                    // + t.get("type") + "|"
+                    // + normalizedDesc + "|"
+                    // + reference + "|"
+                    // + bankAccount.getId();
+
+                    // boolean exists = transactionRepo.existsByFingerprintAndBankAccountId(
+                    // fingerprint,
+                    // bankAccount.getId());
 
                     if (exists) {
                         t.put("reason", "duplicate_fingerprint");

@@ -25,7 +25,5 @@ public interface RecurringPatternService {
 
     List<RecurringPattern> getRecurringPatternsByAccountId(Long accountId);
 
-    void deleteRecurringPattern(Long id);
-
     void processInsightPatterns(Insight insight);
 }

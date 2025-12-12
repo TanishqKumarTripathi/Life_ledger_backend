@@ -54,7 +54,9 @@ public class GeminiServiceImpl implements GeminiService {
     private static final int MAX_ANOMALY_TXNS = 90;
     private static final int MAX_SUMMARY_TXNS = 100;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+            .disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
@@ -479,6 +481,7 @@ public class GeminiServiceImpl implements GeminiService {
 
         return """
                 STRICT RULES (MANDATORY):
+                - Give Amount in rupees
                 - Recurring means CONTRACTUAL or SCHEDULED payments.
                 - Repetition ALONE is NOT recurring.
                 - Do NOT include shopping, groceries, medical, P2P UPI transfers.
@@ -542,6 +545,7 @@ public class GeminiServiceImpl implements GeminiService {
 
         return """
                 STRICT RULES:
+                - Give Amount in rupees
                 - Output ONLY valid JSON
                 - No markdown
                 - No explanations
@@ -578,6 +582,7 @@ public class GeminiServiceImpl implements GeminiService {
         return """
 
                 STRICT RULES:
+                - Give Amount in rupees
                 - Output ONLY valid JSON
                 - No markdown
                 - No explanations

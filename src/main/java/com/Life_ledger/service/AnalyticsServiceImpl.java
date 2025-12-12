@@ -167,7 +167,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     @Override
     public AnalyticsDTO getLatestAnalytics(Long userId) {
         List<Transaction> txns = transactionRepository.findAllByUserId(userId);
-        
+
         AnalyticsDTO analytics = new AnalyticsDTO();
         analytics.setMonthlyTimeline(buildMonthlyTimelineData(txns));
         analytics.setBurnRate(buildBurnRateData(txns));
@@ -176,7 +176,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         analytics.setSpendingTypes(buildSpendingTypesData(txns));
         analytics.setAverages(buildAveragesData(txns));
         analytics.setYearOverYear(buildYearOverYearData(txns));
-        
+
         return analytics;
     }
 
@@ -258,7 +258,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .filter(t -> t.getDate().getYear() == now.getYear() - 1)
                 .mapToDouble(t -> Math.abs(t.getAmount().doubleValue()))
                 .sum();
-        
+
         AnalyticsDTO.YearOverYearData data = new AnalyticsDTO.YearOverYearData();
         data.setCurrentYearTotal(currentYear);
         data.setPreviousYearTotal(previousYear);
@@ -271,7 +271,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     public DashboardStatsDto getDashboardStats(Long userId) {
         List<Transaction> txns = transactionRepository.findAllByUserId(userId);
         double totalSpent = txns.stream().mapToDouble(t -> Math.abs(t.getAmount().doubleValue())).sum();
-        
+
         return DashboardStatsDto.builder()
                 .totalSpent(totalSpent)
                 .totalIncome(0.0)
@@ -284,7 +284,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public List<CategoryInsightDto> getCategorySpending(Long userId, int days, Long accountId) {
-        List<Transaction> txns = accountId != null 
+        List<Transaction> txns = accountId != null
                 ? transactionRepository.findAllByAccount(accountId)
                 : transactionRepository.findAllByUserId(userId);
         return buildCategoryBreakdown(txns);
@@ -299,7 +299,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     @Override
     public AnalyticsDTO getLatestAnalyticsByAccount(Long accountId) {
         List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
-        
+
         AnalyticsDTO analytics = new AnalyticsDTO();
         analytics.setMonthlyTimeline(buildMonthlyTimelineData(txns));
         analytics.setBurnRate(buildBurnRateData(txns));
@@ -308,7 +308,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         analytics.setSpendingTypes(buildSpendingTypesData(txns));
         analytics.setAverages(buildAveragesData(txns));
         analytics.setYearOverYear(buildYearOverYearData(txns));
-        
+
         return analytics;
     }
 
@@ -316,7 +316,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     public DashboardStatsDto getDashboardStatsByAccount(Long accountId) {
         List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
         double totalSpent = txns.stream().mapToDouble(t -> Math.abs(t.getAmount().doubleValue())).sum();
-        
+
         return DashboardStatsDto.builder()
                 .totalSpent(totalSpent)
                 .totalIncome(0.0)

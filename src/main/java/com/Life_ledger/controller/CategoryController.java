@@ -40,9 +40,9 @@ public class CategoryController {
             @RequestParam(required = false) Long accountId) {
 
         User user = getUserFromToken(token);
-        CategoryResponse category = accountId != null 
-            ? categoryService.createCategoryForAccount(accountId, request)
-            : categoryService.createCategory(user.getId(), request);
+        CategoryResponse category = accountId != null
+                ? categoryService.createCategoryForAccount(accountId, request)
+                : categoryService.createCategory(user.getId(), request);
         return ResponseEntity.ok(category);
     }
 

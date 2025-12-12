@@ -13,6 +13,7 @@ import com.Life_ledger.mapper.Recurringmapper;
 import com.Life_ledger.repository.RecurringPatternRepository;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
+import com.Life_ledger.service.RecurringPatternService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,6 +26,7 @@ public class RecurringPatternController {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final Recurringmapper recurringMapper;
+    private final RecurringPatternService recurringPatternService;
 
     private User getUserFromToken(String token) {
         token = token.substring(7);
@@ -67,4 +69,40 @@ public class RecurringPatternController {
 
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/add")
+    public ResponseEntity<RecurringResponseDto> addRecurringPattern(
+            @RequestHeader("Authorization") String token,
+            @RequestBody RecurringPattern request) {
+
+        User user = getUserFromToken(token);
+
+        RecurringPattern saved = recurringPatternService.createRecurringPattern(request, user.getId());
+        return ResponseEntity.ok(recurringMapper.toDto(saved));
+    }
+
+    @PutMapping("/update/{id}")
+    public ResponseEntity<RecurringResponseDto> updateRecurringPattern(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long id,
+            @RequestBody RecurringPattern request) {
+
+        User user = getUserFromToken(token);
+
+        RecurringPattern updated = recurringPatternService.updateRecurringPattern(id, request, user.getId());
+        return ResponseEntity.ok(recurringMapper.toDto(updated));
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<String> deleteRecurringPattern(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long id) {
+
+        User user = getUserFromToken(token);
+
+        recurringPatternService.deleteRecurringPattern(id, user.getId());
+
+        return ResponseEntity.ok("Recurring Pattern deleted successfully");
+    }
+
 }
