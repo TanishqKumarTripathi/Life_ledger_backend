@@ -6,13 +6,18 @@ import com.Life_ledger.dto.account.BankAccountSummaryDto;
 import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.mapper.AccountMapper;
+import com.Life_ledger.repository.AnomalyRecordRepository;
 import com.Life_ledger.repository.BankAccountRepository;
+import com.Life_ledger.repository.GoalRepository;
+import com.Life_ledger.repository.InsightRepository;
+import com.Life_ledger.repository.RecurringPatternRepository;
 import com.Life_ledger.repository.UserRepository;
 
 import com.Life_ledger.util.EncryptionUtil;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,8 +28,10 @@ public class AccountServiceImpl implements AccountService {
 
     private final BankAccountRepository bankAccountRepository;
     private final UserRepository userRepository;
-    // private final TransactionRepository transactionRepository;
-    // private final RecurringPatternRepository recurringPatternRepository;
+    private final RecurringPatternRepository recurringPatternRepository;
+    private final AnomalyRecordRepository anomalyRecordRepository;
+    private final GoalRepository goalRepository;
+    private final InsightRepository insightRepository;
     private final EncryptionUtil encryptionUtil;
 
     @Override
@@ -84,6 +91,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Transactional
     public String deleteAccount(Long userId, Long accountId) {
 
         BankAccount existing = bankAccountRepository.findById(accountId)
@@ -93,6 +101,24 @@ public class AccountServiceImpl implements AccountService {
             throw new RuntimeException("Unauthorized deletion");
         }
 
+        // Delete all related entities first to avoid foreign key constraint violations
+        // Order matters: delete child entities before parent
+        
+        // 1. Delete recurring patterns
+        recurringPatternRepository.deleteByBankAccount_Id(accountId);
+        
+        // 2. Delete anomaly records
+        anomalyRecordRepository.deleteByBankAccount_Id(accountId);
+        
+        // 3. Delete goals
+        goalRepository.deleteByBankAccount_Id(accountId);
+        
+        // 4. Delete insights
+        insightRepository.deleteByBankAccount_Id(accountId);
+        
+        // 5. Transactions will be deleted automatically due to cascade = CascadeType.ALL
+        
+        // 6. Now safe to delete the account
         bankAccountRepository.delete(existing);
         return "Account deleted";
     }

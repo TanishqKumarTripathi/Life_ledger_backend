@@ -22,6 +22,8 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
     List<Goal> findActiveGoalsByUser(Long userId);
 
     List<Goal> findByUserId(Long userId);
+    
+    void deleteByBankAccount_Id(Long bankAccountId);
 
     // List<Goal> findByBankAccountId(Long accountId);
 

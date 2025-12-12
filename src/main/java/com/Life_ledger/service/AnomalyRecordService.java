@@ -14,4 +14,6 @@ public interface AnomalyRecordService {
     AnomalyRecord markResolved(Long id, boolean resolved, String comment);
 
     void deleteAnomaly(Long id);
-}
+
+    List<AnomalyRecord> getAnomaliesByUser(Long userId);}
+//}

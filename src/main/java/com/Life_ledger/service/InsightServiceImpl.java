@@ -1,8 +1,14 @@
 package com.Life_ledger.service;
 
 import com.Life_ledger.dto.insight.InsightResponseDTO;
+import com.Life_ledger.dto.insight.InsightSummaryResponse;
+import com.Life_ledger.dto.insight.InsightType;
+import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.Insight;
+import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.InsightRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +20,8 @@ import java.util.List;
 public class InsightServiceImpl implements InsightService {
 
     private final InsightRepository insightRepository;
+    private final BankAccountRepository bankAccountRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public Insight createInsight(Insight insight) {
@@ -35,7 +43,7 @@ public class InsightServiceImpl implements InsightService {
 
     @Override
     public List<Insight> getInsightsByUserId(Long userId) {
-        return List.of();
+        return insightRepository.findByBankAccount_User_Id(userId);
     }
 
     @Override
@@ -52,7 +60,16 @@ public class InsightServiceImpl implements InsightService {
 
     @Override
     public List<InsightResponseDTO> getInsightsByUserIdDTO(Long userId) {
-        return List.of();
+        return insightRepository.findByBankAccount_User_Id(userId)
+                .stream()
+                .map(insight -> {
+                    InsightResponseDTO dto = new InsightResponseDTO();
+                    dto.setId(insight.getId());
+                    dto.setAiText(insight.getAiText());
+                    dto.setCreatedAt(insight.getCreatedAt());
+                    return dto;
+                })
+                .toList();
     }
 
     @Override
@@ -105,6 +122,83 @@ public class InsightServiceImpl implements InsightService {
 
     @Override
     public Insight getLatestInsight(Long userId) {
-        return null;
+        List<Insight> insights = insightRepository.findByBankAccount_User_Id(userId);
+        return insights.isEmpty() ? null : insights.get(insights.size() - 1);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InsightResponseDTO> getInsightsByUser(Long userId) {
+        return insightRepository.findByBankAccount_User_Id(userId)
+                .stream()
+                .map(insight -> {
+                    InsightResponseDTO dto = new InsightResponseDTO();
+                    dto.setId(insight.getId());
+                    dto.setAiText(insight.getAiText());
+                    dto.setCreatedAt(insight.getCreatedAt());
+                    return dto;
+                })
+                .toList();
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public InsightSummaryResponse getLatestSummaryByAccount(Long accountId) {
+        return insightRepository.findTopByBankAccount_IdAndTypeOrderByCreatedAtDesc(accountId, InsightType.SUMMARY)
+                .map(this::convertToSummaryResponse)
+                .orElse(null);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public InsightSummaryResponse getLatestSummaryByUser(Long userId) {
+        List<BankAccount> accounts = bankAccountRepository.findByUserId(userId);
+        return accounts.stream()
+                .map(acc -> getLatestSummaryByAccount(acc.getId()))
+                .filter(summary -> summary != null)
+                .findFirst()
+                .orElse(null);
+    }
+    
+    private InsightSummaryResponse convertToSummaryResponse(Insight insight) {
+        try {
+            if (insight.getSummaryJson() == null) return null;
+            
+            JsonNode root = objectMapper.readTree(insight.getSummaryJson());
+            InsightSummaryResponse response = new InsightSummaryResponse();
+            response.setId(insight.getId());
+            response.setCreatedAt(insight.getCreatedAt());
+            response.setPeriod(insight.getPeriod());
+            
+            // Parse summary
+            JsonNode summaryNode = root.path("summary");
+            if (!summaryNode.isMissingNode()) {
+                InsightSummaryResponse.SummaryData summary = new InsightSummaryResponse.SummaryData();
+                summary.setText(summaryNode.path("text").asText());
+                summary.setTone(summaryNode.path("tone").asText());
+                summary.setEmoji(summaryNode.path("emoji").asText());
+                summary.setColor(summaryNode.path("color").asText());
+                response.setSummary(summary);
+            }
+            
+            // Parse nudges
+            JsonNode nudgesNode = root.path("nudges");
+            if (nudgesNode.isArray()) {
+                List<InsightSummaryResponse.NudgeData> nudges = new java.util.ArrayList<>();
+                for (JsonNode nudge : nudgesNode) {
+                    InsightSummaryResponse.NudgeData nudgeData = new InsightSummaryResponse.NudgeData();
+                    nudgeData.setType(nudge.path("type").asText());
+                    nudgeData.setText(nudge.path("text").asText());
+                    nudgeData.setTone(nudge.path("tone").asText());
+                    nudgeData.setEmoji(nudge.path("emoji").asText());
+                    nudges.add(nudgeData);
+                }
+                response.setNudges(nudges);
+            }
+            
+            return response;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

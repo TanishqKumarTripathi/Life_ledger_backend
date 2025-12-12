@@ -45,4 +45,9 @@ public class AnomalyRecordServiceImpl implements AnomalyRecordService {
     public void deleteAnomaly(Long id) {
         anomalyRepo.deleteById(id);
     }
+
+    @Override
+    public List<AnomalyRecord> getAnomaliesByUser(Long userId) {
+        return anomalyRepo.findByBankAccount_User_Id(userId);
+    }
 }

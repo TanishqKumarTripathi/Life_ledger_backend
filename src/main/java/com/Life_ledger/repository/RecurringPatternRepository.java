@@ -25,6 +25,10 @@ public interface RecurringPatternRepository extends JpaRepository<RecurringPatte
        List<RecurringPattern> findAllWithBankAccount();
 
        boolean existsByBankAccount_IdAndMerchantIgnoreCase(Long bankAccountId, String merchant);
+       
+       void deleteByBankAccount_Id(Long bankAccountId);
+       
+       void deleteByBankAccount_User_Id(Long userId);
 }
 
 // @Query("SELECT rp FROM RecurringPattern rp " +

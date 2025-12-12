@@ -35,6 +35,10 @@ public class Insight {
     @Basic(fetch = FetchType.EAGER)
     @Column(columnDefinition = "TEXT")
     private String aiText;
+    
+    @Column(columnDefinition = "jsonb")
+    private String summaryJson; // summary is saved in json format
+    
     private LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)

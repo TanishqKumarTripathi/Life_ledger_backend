@@ -38,7 +38,6 @@ public class CategoryController {
             @RequestHeader("Authorization") String token,
             @RequestBody CategoryRequest request,
             @RequestParam(required = false) Long accountId) {
-
         User user = getUserFromToken(token);
         CategoryResponse category = accountId != null
                 ? categoryService.createCategoryForAccount(accountId, request)

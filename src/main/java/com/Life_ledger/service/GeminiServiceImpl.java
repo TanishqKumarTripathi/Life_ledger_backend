@@ -863,6 +863,7 @@ public class GeminiServiceImpl implements GeminiService {
                     .type(InsightType.SUMMARY)
                     .period(period)
                     .aiText(fullJson)
+                    .summaryJson(fullJson)
                     .build();
 
             insightRepository.save(insight);
