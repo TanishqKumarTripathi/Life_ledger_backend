@@ -22,9 +22,6 @@ public class GoalProgressScheduler {
     private final TransactionRepository transactionRepository;
     private final GoalProgressService goalProgressService;
 
-    /**
-     * Runs every 15 minutes
-     */
     @Scheduled(fixedDelay = 15 * 60 * 1000)
     public void recalculateGoalsAndNudges() {
 
