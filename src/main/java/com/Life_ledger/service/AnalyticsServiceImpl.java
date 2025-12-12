@@ -47,6 +47,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     public AnalyticsDTO getLatestAnalytics(Long userId) {
         List<Transaction> rawTxns = transactionRepository.findAllByUserId(userId);
         List<NormalizedTransaction> txns = normalizationService.normalizeTransactions(rawTxns);
+//        List<Transaction> txns = transactionRepository.findAllByUserId(userId);
 
         AnalyticsDTO analytics = new AnalyticsDTO();
         analytics.setMonthlyTimeline(buildMonthlyTimelineData(txns));
@@ -81,6 +82,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     public DashboardStatsDto getDashboardStats(Long userId) {
         return new DashboardStatsDto();
     }
+
 
     @Override
     public DashboardStatsDto getDashboardStatsByAccount(Long accountId) {
@@ -358,4 +360,71 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
         return data;
     }
+
+
+//    @Override
+//    public DashboardStatsDto getDashboardStats(Long userId) {
+//        List<Transaction> txns = transactionRepository.findAllByUserId(userId);
+//        double totalSpent = txns.stream().mapToDouble(t -> Math.abs(t.getAmount().doubleValue())).sum();
+//
+//        return DashboardStatsDto.builder()
+//                .totalSpent(totalSpent)
+//                .totalIncome(0.0)
+//                .budgetLeft(0.0)
+//                .transactionCount((long) txns.size())
+//                .subscriptionCount(0L)
+//                .savingsRate(0.0)
+//                .build();
+//    }
+//
+//    @Override
+//    public List<CategoryInsightDto> getCategorySpending(Long userId, int days, Long accountId) {
+//        List<Transaction> txns = accountId != null
+//                ? transactionRepository.findAllByAccount(accountId)
+//                : transactionRepository.findAllByUserId(userId);
+//        return buildCategoryBreakdown(txns);
+//    }
+
+//    @Override
+//    public List<MonthlyInsightDto> getMonthlySpending(Long userId, int months) {
+//        List<Transaction> txns = transactionRepository.findAllByUserId(userId);
+//        return buildMonthlyTimeline(txns);
+//    }
+
+//    @Override
+//    public AnalyticsDTO getLatestAnalyticsByAccount(Long accountId) {
+//        List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
+//
+//        AnalyticsDTO analytics = new AnalyticsDTO();
+//        analytics.setMonthlyTimeline(buildMonthlyTimelineData(txns));
+//        analytics.setBurnRate(buildBurnRateData(txns));
+//        analytics.setTopCategories(buildTopCategoriesData(txns));
+//        analytics.setTopMerchants(buildTopMerchantsData(txns));
+//        analytics.setSpendingTypes(buildSpendingTypesData(txns));
+//        analytics.setAverages(buildAveragesData(txns));
+//        analytics.setYearOverYear(buildYearOverYearData(txns));
+//
+//        return analytics;
+//    }
+
+//    @Override
+//    public DashboardStatsDto getDashboardStatsByAccount(Long accountId) {
+//        List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
+//        double totalSpent = txns.stream().mapToDouble(t -> Math.abs(t.getAmount().doubleValue())).sum();
+//
+//        return DashboardStatsDto.builder()
+//                .totalSpent(totalSpent)
+//                .totalIncome(0.0)
+//                .budgetLeft(0.0)
+//                .transactionCount((long) txns.size())
+//                .subscriptionCount(0L)
+//                .savingsRate(0.0)
+//                .build();
+//    }
+
+//    @Override
+//    public List<MonthlyInsightDto> getMonthlySpendingByAccount(Long accountId, int months) {
+//        List<Transaction> txns = transactionRepository.findAllByBankAccountId(accountId);
+//        return buildMonthlyTimeline(txns);
+//    }
 }

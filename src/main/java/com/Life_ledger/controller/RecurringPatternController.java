@@ -72,6 +72,7 @@ public class RecurringPatternController {
         return ResponseEntity.ok(response);
     }
 
+//<<<<<<< HEAD
     /**
      * Delete all recurring patterns for a specific account
      */
@@ -122,26 +123,61 @@ public class RecurringPatternController {
     /**
      * Delete individual recurring pattern
      */
-    @DeleteMapping("/{patternId}")
-    @Transactional
-    public ResponseEntity<Map<String, Object>> deleteRecurringPattern(
+//    @DeleteMapping("/{patternId}")
+//    @Transactional
+//    public ResponseEntity<Map<String, Object>> deleteRecurringPattern(
+//            @RequestHeader("Authorization") String token,
+//            @PathVariable Long patternId) {
+//
+//        try {
+//            User user = getUserFromToken(token);
+//            recurringPatternService.deleteRecurringPattern(patternId, user.getId());
+//
+//            return ResponseEntity.ok(Map.of(
+//                "status", "success",
+//                "message", "Recurring pattern deleted successfully"
+//            ));
+//
+//        } catch (Exception e) {
+//            return ResponseEntity.status(400).body(Map.of(
+//                "status", "error",
+//                "message", e.getMessage()
+//            ));
+//        }
+//    }
+    @PostMapping("/add")
+    public ResponseEntity<RecurringResponseDto> addRecurringPattern(
             @RequestHeader("Authorization") String token,
-            @PathVariable Long patternId) {
-        
-        try {
-            User user = getUserFromToken(token);
-            recurringPatternService.deleteRecurringPattern(patternId, user.getId());
-            
-            return ResponseEntity.ok(Map.of(
-                "status", "success",
-                "message", "Recurring pattern deleted successfully"
-            ));
-            
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body(Map.of(
-                "status", "error",
-                "message", e.getMessage()
-            ));
-        }
+            @RequestBody RecurringPattern request) {
+
+        User user = getUserFromToken(token);
+
+        RecurringPattern saved = recurringPatternService.createRecurringPattern(request, user.getId());
+        return ResponseEntity.ok(recurringMapper.toDto(saved));
     }
+
+    @PutMapping("/update/{id}")
+    public ResponseEntity<RecurringResponseDto> updateRecurringPattern(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long id,
+            @RequestBody RecurringPattern request) {
+
+        User user = getUserFromToken(token);
+
+        RecurringPattern updated = recurringPatternService.updateRecurringPattern(id, request, user.getId());
+        return ResponseEntity.ok(recurringMapper.toDto(updated));
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<String> deleteRecurringPattern(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long id) {
+
+        User user = getUserFromToken(token);
+
+        recurringPatternService.deleteRecurringPattern(id, user.getId());
+
+        return ResponseEntity.ok("Recurring Pattern deleted successfully");
+    }
+
 }

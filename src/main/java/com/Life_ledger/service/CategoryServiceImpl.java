@@ -107,5 +107,26 @@ public class CategoryServiceImpl implements CategoryService {
         categoryRepository.delete(category);
     }
 
+    @Override
+    public CategoryResponse createCategoryForAccount(Long accountId, CategoryRequest request) {
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            throw new RuntimeException("Category name cannot be empty");
+        }
+        BankAccount bankAccount = bankAccountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Bank account not found"));
+        // Check duplicate category for THIS account
+        categoryRepository.findByBankAccountIdAndNameIgnoreCase(accountId, request.getName())
+                .ifPresent(c -> {
+                    throw new RuntimeException("Category already exists for this account");
+                });
+        Category category = Category.builder()
+                .name(request.getName().trim())
+                .user(bankAccount.getUser())
+                .bankAccount(bankAccount)
+                .build();
+        Category saved = categoryRepository.save(category);
+        return CategoryMapper.toResponse(saved);
+    }
+
 
 }

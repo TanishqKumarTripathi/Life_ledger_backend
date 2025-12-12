@@ -14,4 +14,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     boolean existsByIdAndUser_Id(Long categoryId, Long userId);
 
+    Optional<Category> findByBankAccountIdAndNameIgnoreCase(Long bankAccountId, String name);
+
+    List<Category> findByBankAccountId(Long bankAccountId);
+
 }

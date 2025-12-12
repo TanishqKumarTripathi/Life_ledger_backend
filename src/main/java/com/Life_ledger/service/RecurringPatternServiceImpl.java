@@ -27,18 +27,40 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
 
     @Override
     public RecurringPattern createRecurringPattern(RecurringPattern recurringPattern, Long userId) {
+
         BankAccount account = bankAccountRepository.findById(recurringPattern.getBankAccount().getId())
                 .orElseThrow(() -> new RuntimeException("Bank account not found"));
+
         if (!account.getUser().getId().equals(userId)) {
             throw new RuntimeException("Unauthorized bank account access");
         }
+
+        // Check duplicate
+        boolean exists = recurringPatternRepository
+                .existsByBankAccount_IdAndMerchantIgnoreCase(account.getId(), recurringPattern.getMerchant());
+
+        if (exists) {
+            throw new RuntimeException("Recurring Pattern already exists for this merchant");
+        }
+
         recurringPattern.setBankAccount(account);
+        recurringPattern.setNextDueDate(
+                recurringPattern.getNextDueDate() != null
+                        ? recurringPattern.getNextDueDate()
+                        : calculateNextDueDate(recurringPattern.getFrequency()));
+
         return recurringPatternRepository.save(recurringPattern);
     }
 
     @Override
     public RecurringPattern updateRecurringPattern(Long id, RecurringPattern updated, Long userId) {
-        RecurringPattern existing = getRecurringPattern(id, userId);
+
+        RecurringPattern existing = recurringPatternRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Recurring Pattern not found"));
+
+        if (!existing.getBankAccount().getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized to update this pattern");
+        }
 
         existing.setMerchant(updated.getMerchant());
         existing.setAmount(updated.getAmount());
@@ -74,12 +96,6 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
     }
 
     @Override
-    public void deleteRecurringPattern(Long id, Long userId) {
-        RecurringPattern pattern = getRecurringPattern(id, userId);
-        recurringPatternRepository.delete(pattern);
-    }
-
-    @Override
     public List<RecurringPattern> getRecurringPatternsByUserId(Long userId) {
         return List.of();
     }
@@ -90,8 +106,16 @@ public class RecurringPatternServiceImpl implements RecurringPatternService {
     }
 
     @Override
-    public void deleteRecurringPattern(Long id) {
+    public void deleteRecurringPattern(Long id, Long userId) {
 
+        RecurringPattern pattern = recurringPatternRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Recurring Pattern not found"));
+
+        if (!pattern.getBankAccount().getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized to delete this recurring pattern");
+        }
+
+        recurringPatternRepository.delete(pattern);
     }
 
     @Override

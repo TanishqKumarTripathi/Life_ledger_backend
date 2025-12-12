@@ -24,6 +24,10 @@ public class Category {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @ManyToOne
+    @JoinColumn(name = "bank_account_id")
+    private BankAccount bankAccount;
+
     @Enumerated(EnumType.STRING)
     private CategorySource categorySource;
 

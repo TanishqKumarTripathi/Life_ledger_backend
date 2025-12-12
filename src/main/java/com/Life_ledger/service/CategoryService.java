@@ -16,4 +16,6 @@ public interface CategoryService {
     CategoryResponse updateCategory(Long userId, Long categoryId, CategoryRequest request);
 
     void deleteCategory(Long userId, Long categoryId);
+
+    CategoryResponse createCategoryForAccount(Long accountId, CategoryRequest request);
 }
