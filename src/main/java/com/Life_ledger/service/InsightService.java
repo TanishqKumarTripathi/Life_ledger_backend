@@ -1,7 +1,6 @@
 package com.Life_ledger.service;
 
 import com.Life_ledger.dto.insight.InsightResponseDTO;
-import com.Life_ledger.dto.insight.InsightSummaryResponse;
 import com.Life_ledger.entity.Insight;
 
 import java.util.List;
@@ -29,11 +28,7 @@ public interface InsightService {
     List<InsightResponseDTO> getInsightsByAccount(Long accountId);
     Insight getLatestInsight(Long userId);
 
-    List<InsightResponseDTO> getInsightsByUser(Long userId);
-    
-    InsightSummaryResponse getLatestSummaryByAccount(Long accountId);
-    InsightSummaryResponse getLatestSummaryByUser(Long userId);
-
+    Insight getLatestSummaryforAccount(Long accountId);
 //    // AI Analysis methods
 //    Object getInsightSection(Long userId, String sectionName);
 //    Object getInsightSectionByAccount(Long accountId, String sectionName);
