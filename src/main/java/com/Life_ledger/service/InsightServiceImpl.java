@@ -21,10 +21,11 @@ public class InsightServiceImpl implements InsightService {
 
     private final InsightRepository insightRepository;
     private final BankAccountRepository bankAccountRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Override
     public Insight createInsight(Insight insight) {
+        JsonNode root = insight.getSummaryJson();
         return insightRepository.save(insight);
     }
 
@@ -140,7 +141,7 @@ public class InsightServiceImpl implements InsightService {
                 })
                 .toList();
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public InsightSummaryResponse getLatestSummaryByAccount(Long accountId) {
@@ -148,7 +149,7 @@ public class InsightServiceImpl implements InsightService {
                 .map(this::convertToSummaryResponse)
                 .orElse(null);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public InsightSummaryResponse getLatestSummaryByUser(Long userId) {
@@ -159,43 +160,44 @@ public class InsightServiceImpl implements InsightService {
                 .findFirst()
                 .orElse(null);
     }
-    
+
     private InsightSummaryResponse convertToSummaryResponse(Insight insight) {
         try {
-            if (insight.getSummaryJson() == null) return null;
-            
-            JsonNode root = objectMapper.readTree(insight.getSummaryJson());
+            JsonNode root = insight.getSummaryJson();
+            if (root == null || root.isNull())
+                return null;
+
             InsightSummaryResponse response = new InsightSummaryResponse();
             response.setId(insight.getId());
             response.setCreatedAt(insight.getCreatedAt());
             response.setPeriod(insight.getPeriod());
-            
-            // Parse summary
+
+            // Summary
             JsonNode summaryNode = root.path("summary");
             if (!summaryNode.isMissingNode()) {
                 InsightSummaryResponse.SummaryData summary = new InsightSummaryResponse.SummaryData();
-                summary.setText(summaryNode.path("text").asText());
-                summary.setTone(summaryNode.path("tone").asText());
-                summary.setEmoji(summaryNode.path("emoji").asText());
-                summary.setColor(summaryNode.path("color").asText());
+                summary.setText(summaryNode.path("text").asText(null));
+                summary.setTone(summaryNode.path("tone").asText(null));
+                summary.setEmoji(summaryNode.path("emoji").asText(null));
+                summary.setColor(summaryNode.path("color").asText(null));
                 response.setSummary(summary);
             }
-            
-            // Parse nudges
+
+            // Nudges
             JsonNode nudgesNode = root.path("nudges");
             if (nudgesNode.isArray()) {
                 List<InsightSummaryResponse.NudgeData> nudges = new java.util.ArrayList<>();
                 for (JsonNode nudge : nudgesNode) {
                     InsightSummaryResponse.NudgeData nudgeData = new InsightSummaryResponse.NudgeData();
-                    nudgeData.setType(nudge.path("type").asText());
-                    nudgeData.setText(nudge.path("text").asText());
-                    nudgeData.setTone(nudge.path("tone").asText());
-                    nudgeData.setEmoji(nudge.path("emoji").asText());
+                    nudgeData.setType(nudge.path("type").asText(null));
+                    nudgeData.setText(nudge.path("text").asText(null));
+                    nudgeData.setTone(nudge.path("tone").asText(null));
+                    nudgeData.setEmoji(nudge.path("emoji").asText(null));
                     nudges.add(nudgeData);
                 }
                 response.setNudges(nudges);
             }
-            
+
             return response;
         } catch (Exception e) {
             return null;

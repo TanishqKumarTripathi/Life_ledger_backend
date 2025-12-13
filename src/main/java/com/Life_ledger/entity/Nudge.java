@@ -56,19 +56,19 @@ public class Nudge {
         }
     }
 
-    @Column(precision = 12, scale = 2)
+    @Column(precision = 19, scale = 2)
     private BigDecimal spendAmount;
 
-    @Column(precision = 12, scale = 2)
+    @Column(precision = 19, scale = 2)
     private BigDecimal targetAmount;
 
-    @Column(precision = 12, scale = 2)
+    @Column(precision = 19, scale = 2)
     private BigDecimal remainingAmount;
 
-    @Column(precision = 12, scale = 2)
+    @Column(precision = 19, scale = 2)
     private BigDecimal exceededAmount;
 
-    @Column(precision = 5, scale = 2)
+    @Column(precision = 7, scale = 2)
     private BigDecimal progressPercent;
 
 }

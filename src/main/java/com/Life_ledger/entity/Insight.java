@@ -9,7 +9,11 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import com.Life_ledger.dto.insight.InsightType;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Entity
 @Table(name = "insight")
@@ -35,10 +39,11 @@ public class Insight {
     @Basic(fetch = FetchType.EAGER)
     @Column(columnDefinition = "TEXT")
     private String aiText;
-    
+
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String summaryJson; // summary is saved in json format
-    
+    private JsonNode summaryJson; // summary is saved in json format
+
     private LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)

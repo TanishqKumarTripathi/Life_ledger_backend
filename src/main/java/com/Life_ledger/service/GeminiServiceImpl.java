@@ -862,8 +862,8 @@ public class GeminiServiceImpl implements GeminiService {
                     .bankAccount(account)
                     .type(InsightType.SUMMARY)
                     .period(period)
-                    .aiText(fullJson)
-                    .summaryJson(fullJson)
+                    .aiText(summaryJson.toString()) // ✅ String OK here
+                    .summaryJson(summaryJson) // ✅ JsonNode ONLY
                     .build();
 
             insightRepository.save(insight);
