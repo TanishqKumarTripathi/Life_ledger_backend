@@ -9,13 +9,15 @@ public class AccountMapper {
     public static BankAccount toEntity(AccountRequest request) {
         return BankAccount.builder()
                 .bankName(request.getBankName())
+                .accountName(request.getAccountName())
                 .build();
     }
 
     public static AccountResponse toResponse(BankAccount account) {
         return AccountResponse.builder()
                 .id(account.getId())
-                .bankName(account.getBankName())
+                .accountName(account.getAccountName() != null ? account.getAccountName() : "HDFC Account")
+                .bankName(account.getBankName() != null ? account.getBankName() : "HDFC Bank")
                 .last4Digits(account.getLast4Digits())
                 .build();
     }
@@ -25,7 +27,8 @@ public class AccountMapper {
             return null;
         return AccountResponse.builder()
                 .id(account.getId())
-                .bankName(account.getBankName())
+                .bankName(account.getBankName() != null ? account.getBankName() : "HDFC Bank")
+                .accountName(account.getAccountName() != null ? account.getAccountName() : "HDFC Account")
                 .last4Digits(account.getLast4Digits())
                 .build();
     }

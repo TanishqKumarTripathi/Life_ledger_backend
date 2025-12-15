@@ -4,6 +4,8 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import com.Life_ledger.Enum.TransactionEnum;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,8 +16,10 @@ public class TransactionResponse {
     private BigDecimal amount;
     private LocalDate date;
     private String notes;
+    private TransactionEnum typeTransaction;
     private boolean recurring;
     private boolean anomaly;
-    private Long bankAccountId;
-    private Long categoryId;
+    private String bankAccountLast4;
+    private String categoryName;
+    private String subCategoryName;
 }

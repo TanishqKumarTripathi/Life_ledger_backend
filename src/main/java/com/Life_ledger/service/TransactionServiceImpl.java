@@ -1,13 +1,20 @@
 package com.Life_ledger.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+import com.Life_ledger.Enum.TransactionEnum;
 import com.Life_ledger.dto.transaction.*;
 import com.Life_ledger.dto.usercorrection.UserCorrectionRequest;
 import com.Life_ledger.dto.usercorrection.UserCorrectionResponse;
 import com.Life_ledger.entity.*;
 import com.Life_ledger.mapper.TransactionMapper;
 import com.Life_ledger.repository.*;
-import com.Life_ledger.service.TransactionService;
+import com.Life_ledger.util.TransactionFingerprintUtil;
 
+import org.springframework.data.domain.Sort;
+
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +29,9 @@ public class TransactionServiceImpl implements TransactionService {
     private final BankAccountRepository bankAccountRepository;
     private final CategoryRepository categoryRepository;
     private final UserCorrectionRepository userCorrectionRepository;
+    private final AnomalyRecordRepository anomalyRecordRepository;
     private final TransactionMapper transactionMapper;
+    private final TransactionFingerprintUtil transactionFingerprintUtil;
 
     private void checkUserOwnership(Long userId, BankAccount account) {
         if (!account.getUser().getId().equals(userId))
@@ -45,8 +54,16 @@ public class TransactionServiceImpl implements TransactionService {
                 .notes(request.getNotes())
                 .recurring(request.isRecurring())
                 .anomaly(request.isAnomaly())
+                .typeTransaction(request.getTypeTransaction()) // ✅ REQUIRED
                 .bankAccount(account)
                 .category(category)
+                .fingerprint(
+                        transactionFingerprintUtil.build(
+                                request.getDate(),
+                                request.getAmount(),
+                                TransactionEnum.DEBIT,
+                                request.getMerchant(),
+                                account.getId())) // ✅ REQUIRED
                 .build();
 
         Transaction saved = transactionRepository.save(txn);
@@ -64,9 +81,11 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public List<TransactionResponse> getAllTransactions(Long userId, Long bankAccountId, Long categoryId) {
         return transactionRepository.findAll().stream()
-               // .filter(t -> t.getBankAccount()!=null && t.getBankAccount().getUser()!=null && t.getBankAccount().getUser().getId().equals(userId))
+                .filter(t -> t.getBankAccount() != null && t.getBankAccount().getUser() != null
+                        && t.getBankAccount().getUser().getId().equals(userId))
                 .filter(t -> bankAccountId == null || t.getBankAccount().getId().equals(bankAccountId))
-                .filter(t -> categoryId == null || t.getCategory().getId().equals(categoryId))
+                .filter(t -> categoryId == null
+                        || (t.getCategory() != null && t.getCategory().getId().equals(categoryId)))
                 .map(transactionMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -89,14 +108,6 @@ public class TransactionServiceImpl implements TransactionService {
         txn.setAnomaly(request.isAnomaly());
 
         return transactionMapper.toResponse(transactionRepository.save(txn));
-    }
-
-    @Override
-    public void deleteTransaction(Long userId, Long id) {
-        Transaction txn = transactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
-        checkUserOwnership(userId, txn.getBankAccount());
-        transactionRepository.delete(txn);
     }
 
     @Override
@@ -146,8 +157,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public List<TransactionResponse> getRecurringTransactions(Long userId) {
-        return transactionRepository.findAll().stream()
-                .filter(t -> t.getBankAccount().getUser().getId().equals(userId))
+        return transactionRepository.findAll().stream().filter(t -> t.getBankAccount().getUser().getId().equals(userId))
                 .filter(Transaction::isRecurring)
                 .map(transactionMapper::toResponse)
                 .collect(Collectors.toList());
@@ -161,4 +171,116 @@ public class TransactionServiceImpl implements TransactionService {
                 .map(transactionMapper::toResponse)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional
+    public void deleteTransaction(Long userId, Long transactionId) {
+
+        Transaction transaction = transactionRepository
+                .findByIdAndBankAccount_User_Id(transactionId, userId)
+                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+
+        // ✅ correction already handled
+        if (transaction.getCorrection() != null) {
+            transaction.getCorrection().setTransaction(null);
+        }
+
+        transactionRepository.delete(transaction);
+
+    }
+
+    public BigDecimal getTotalSpent(Long userId, LocalDate startDate, LocalDate endDate) {
+        return transactionRepository.getTotalSpentByUser(userId);
+    }
+
+    @Override
+    public BigDecimal getTransactionCount(Long userId) {
+        return transactionRepository.getTransactionCount(userId);
+    }
+
+    @Override
+    public List<TransactionResponse> getRecentTransactions(Long userId) {
+        return transactionRepository.findRecentTransactionsByUserId(userId).stream()
+                .map(transactionMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void deleteAllTransactions(Long userId) {
+        List<Transaction> transactions = transactionRepository.findAllByBankAccount_User_Id(userId);
+
+        // Delete all anomaly records for these transactions
+        List<Long> transactionIds = transactions.stream()
+                .map(Transaction::getId)
+                .collect(Collectors.toList());
+
+        if (!transactionIds.isEmpty()) {
+            anomalyRecordRepository.deleteByTransactionIdIn(transactionIds);
+        }
+
+        transactionRepository.deleteAll(transactions);
+    }
+
+    public List<Transaction> getTransactionsByCategory(Long categoryId) {
+
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        return transactionRepository.findByCategory(category);
+    }
+
+    @Override
+    public List<TransactionResponse> getTransactionsByCategory(Long userId, Long categoryId) {
+
+        // ✅ Ownership check (important)
+        boolean categoryExists = categoryRepository
+                .existsByIdAndUser_Id(categoryId, userId);
+
+        if (!categoryExists) {
+            throw new RuntimeException("Category not found or unauthorized");
+        }
+
+        return transactionRepository
+                .findByCategory_IdAndBankAccount_User_Id(categoryId, userId)
+                .stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<TransactionResponse> getTransactionsByMonth(Long userId, int month, int year) {
+
+        return transactionRepository
+                .findByUserAndMonth(userId, month, year)
+                .stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<TransactionResponse> sortTransactions(
+            Long userId,
+            String sortBy,
+            String direction) {
+
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        return transactionRepository
+                .findByBankAccount_User_Id(userId, sort)
+                .stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+    }
+
+    public List<TransactionResponse> getByBankAccount(Long bankAccountId, int month, int year) {
+        return transactionRepository
+                .findByBankAccountAndMonth(bankAccountId, month, year)
+                .stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+    }
+
 }

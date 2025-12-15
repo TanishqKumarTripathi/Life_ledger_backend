@@ -1,43 +1,46 @@
 package com.Life_ledger.mapper;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+import org.springframework.stereotype.Component;
+
 import com.Life_ledger.dto.goals.GoalRequest;
 import com.Life_ledger.dto.goals.GoalResponse;
 import com.Life_ledger.entity.Goal;
+import com.Life_ledger.Enum.GoalStatus;
+import com.Life_ledger.Enum.GoalType;
 
-import java.math.BigDecimal;
-
+@Component
 public class GoalMapper {
 
-    public static Goal toEntity(GoalRequest req) {
+    public Goal toEntity(GoalRequest req) {
         return Goal.builder()
                 .name(req.getName())
                 .targetAmount(req.getTargetAmount())
                 .currentAmount(BigDecimal.ZERO)
-                .type(req.getType())
                 .category(req.getCategory())
                 .startDate(req.getStartDate())
                 .deadline(req.getDeadline())
+                .type(req.getType()) // ✅ FIX
+                .status(GoalStatus.ACTIVE)
                 .build();
     }
 
-    public static GoalResponse toResponse(Goal goal) {
-        return GoalResponse.builder()
-                .id(goal.getId())
-                .name(goal.getName())
-                .category(goal.getCategory())
-                .targetAmount(goal.getTargetAmount())
-                .currentAmount(goal.getCurrentAmount())
-                .deadline(goal.getDeadline())
-                .startDate(goal.getStartDate())
-                .type(goal.getType())
-                .progressPercent(
-                        goal.getTargetAmount() != null && goal.getTargetAmount().compareTo(BigDecimal.ZERO) > 0
-                                ? goal.getCurrentAmount().doubleValue() / goal.getTargetAmount().doubleValue() * 100
-                                : 0.0
-                )
-                .build();
+    public void updateGoalFromRequest(Goal goal, GoalRequest req) {
+        if (req.getName() != null)
+            goal.setName(req.getName());
+
+        if (req.getTargetAmount() != null)
+            goal.setTargetAmount(req.getTargetAmount());
+
+        if (req.getDeadline() != null)
+            goal.setDeadline(req.getDeadline());
+
+        if (req.getCategory() != null)
+            goal.setCategory(req.getCategory());
+
+        if (req.getType() != null)
+            goal.setType(req.getType()); // ✅ FIX
     }
-
-
-
 }

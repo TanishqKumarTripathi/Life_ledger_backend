@@ -1,0 +1,36 @@
+package com.Life_ledger.repository;
+
+import com.Life_ledger.entity.AnomalyRecord;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Repository
+public interface AnomalyRecordRepository extends JpaRepository<AnomalyRecord, Long> {
+
+    List<AnomalyRecord> findByBankAccount_Id(Long bankAccountId);
+    List<AnomalyRecord> findByTransaction_Id(Long transactionId);
+    List<AnomalyRecord> findByBankAccount_User_Id(Long userId);
+    
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM AnomalyRecord a WHERE a.transaction.id = :transactionId")
+    void deleteByTransactionId(@Param("transactionId") Long transactionId);
+    
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM AnomalyRecord a WHERE a.transaction.id IN :transactionIds")
+    void deleteByTransactionIdIn(@Param("transactionIds") List<Long> transactionIds);
+    
+    void deleteByBankAccount_Id(Long bankAccountId);
+    @Modifying
+    @Query("delete from AnomalyRecord i where i.bankAccount.id in :ids")
+    void deleteByBankAccountIds(@Param("ids") List<Long> ids);
+
+
+}

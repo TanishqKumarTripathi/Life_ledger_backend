@@ -23,9 +23,8 @@ import java.util.List;
 @RequestMapping("/api/accounts")
 @RequiredArgsConstructor
 public class AccountController {
-
         private final AccountService accountService;
-        private final JwtUtil jwtUtils;
+        private final JwtUtil jwtUtil;
         private final UserRepository userRepository;
         private final BankAccountRepository bankAccountRepository;
         private final EncryptionUtil encryptionUtil;
@@ -37,7 +36,7 @@ public class AccountController {
 
                 token = token.substring(7);
 
-                String email = jwtUtils.extractUsername(token);
+                String email = jwtUtil.extractUsername(token);
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new RuntimeException("Invalid user"));
 
@@ -53,7 +52,7 @@ public class AccountController {
 
                 token = token.substring(7);
 
-                String email = jwtUtils.extractUsername(token);
+                String email = jwtUtil.extractUsername(token);
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new RuntimeException("Invalid user"));
 
@@ -67,7 +66,7 @@ public class AccountController {
                         @PathVariable Long accountId) {
 
                 token = token.substring(7);
-                String email = jwtUtils.extractUsername(token);
+                String email = jwtUtil.extractUsername(token);
 
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new RuntimeException("Invalid user"));
@@ -88,30 +87,63 @@ public class AccountController {
                         @PathVariable Long accountId) {
 
                 token = token.substring(7);
-                Long userId = jwtUtils.extractUserId(token, userRepository);
+                Long userId = jwtUtil.extractUserId(token, userRepository);
 
-                BankAccount account = bankAccountRepository.findById(accountId)
+                bankAccountRepository.findById(accountId)
                                 .orElseThrow(() -> new RuntimeException("Account not found"));
 
-                String msg = accountService.deleteAccount(userId, account);
+                String msg = accountService.deleteAccount(userId, accountId);
 
                 return ResponseEntity.ok(msg);
         }
 
-        @PutMapping("/{accountId}")
+    @DeleteMapping("/me")
+    public ResponseEntity<?> deleteMyAccount(
+            @RequestHeader("Authorization") String token) {
+
+        token = token.substring(7);
+        Long userId = jwtUtil.extractUserId(token, userRepository);
+
+        accountService.deleteUserAccount(userId);
+
+        return ResponseEntity.ok().build();
+    }
+
+
+
+    @PutMapping("/{accountId}")
         public ResponseEntity<AccountResponse> updateAccount(
                         @RequestHeader("Authorization") String token,
                         @PathVariable Long accountId,
                         @RequestBody AccountRequest request) {
 
                 token = token.substring(7);
-                Long userId = jwtUtils.extractUserId(token, userRepository);
+                Long userId = jwtUtil.extractUserId(token, userRepository);
 
-                request.setUserId(accountId); // set id inside request
+                request.setUserId(userId);
 
-                BankAccount updated = accountService.updateAccount(userId, request);
+                BankAccount updated = accountService.updateAccount(userId, accountId, request);
 
-                return ResponseEntity.ok(AccountMapper.fromEntity(updated));
+                return ResponseEntity.ok(AccountMapper.toResponse(updated));
+        }
+
+        @GetMapping("/last4")
+        public ResponseEntity<?> getLast4Digits(@RequestHeader("Authorization") String token) {
+
+                User user = getUser(token);
+
+                return ResponseEntity.ok(accountService.getUserBankAccounts(user.getId()));
+        }
+
+        private User getUser(String header) {
+                if (header == null || !header.startsWith("Bearer "))
+                        throw new RuntimeException("Invalid token");
+
+                String token = header.substring(7);
+                String email = jwtUtil.extractUsername(token);
+
+                return userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
         }
 
 }

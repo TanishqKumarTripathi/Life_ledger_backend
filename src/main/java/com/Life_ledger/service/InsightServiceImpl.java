@@ -1,9 +1,12 @@
 package com.Life_ledger.service;
 
+import com.Life_ledger.dto.insight.InsightResponseDTO;
+import com.Life_ledger.dto.insight.InsightType;
 import com.Life_ledger.entity.Insight;
 import com.Life_ledger.repository.InsightRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -24,22 +27,96 @@ public class InsightServiceImpl implements InsightService {
                 .orElseThrow(() -> new RuntimeException("Insight not found with id: " + id));
     }
 
+    // 🚀 NEW — correct fetch method
     @Override
-    public List<Insight> getAllInsights() {
-        return insightRepository.findAll();
+    public List<Insight> getInsightsByBankAccountId(Long accountId) {
+        return insightRepository.findByBankAccount_Id(accountId);
+
     }
 
     @Override
-    public Insight updateInsight(Long id, Insight insight) {
-        Insight existingInsight = getInsight(id);
-        existingInsight.setAiText(insight.getAiText());
-        existingInsight.setUser(insight.getUser());
-        existingInsight.setRelatedTransactions(insight.getRelatedTransactions());
-        return insightRepository.save(existingInsight);
+    public List<Insight> getInsightsByUserId(Long userId) {
+        return List.of();
+    }
+
+    @Override
+    public Insight updateInsight(Long id, String aiText) {
+        Insight existing = getInsight(id);
+        existing.setAiText(aiText);
+        return insightRepository.save(existing);
     }
 
     @Override
     public void deleteInsight(Long id) {
         insightRepository.deleteById(id);
     }
+
+    @Override
+    public List<InsightResponseDTO> getInsightsByUserIdDTO(Long userId) {
+        return List.of();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public InsightResponseDTO getInsightDTO(Long id) {
+        Insight insight = getInsight(id);
+
+        InsightResponseDTO dto = new InsightResponseDTO();
+        dto.setId(insight.getId());
+        dto.setAiText(insight.getAiText());
+        dto.setCreatedAt(insight.getCreatedAt());
+
+        return dto;
+    }
+
+    // 🚀 NEW — bank-account–based DTO fetch
+    @Override
+    @Transactional(readOnly = true)
+    public List<InsightResponseDTO> getInsightsByBankAccountIdDTO(Long accountId) {
+        return insightRepository.findByBankAccount_Id(accountId)
+                .stream()
+                .map(insight -> {
+                    InsightResponseDTO dto = new InsightResponseDTO();
+                    dto.setId(insight.getId());
+                    dto.setAiText(insight.getAiText());
+                    dto.setCreatedAt(insight.getCreatedAt());
+                    return dto;
+                })
+                .toList();
+    }
+
+    @Transactional(readOnly = true) // ✅ REQUIRED
+    @Override
+    public List<InsightResponseDTO> getInsightsByAccount(Long accountId) {
+
+        return insightRepository.findByBankAccount_Id(accountId)
+                .stream()
+                .map(insight -> {
+                    InsightResponseDTO dto = new InsightResponseDTO();
+                    dto.setId(insight.getId());
+
+                    // ✅ LOB accessed while session is OPEN
+                    dto.setAiText(insight.getAiText());
+
+                    dto.setCreatedAt(insight.getCreatedAt());
+                    return dto;
+                })
+                .toList();
+    }
+
+    @Override
+    public Insight getLatestInsight(Long userId) {
+        return null;
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Insight getLatestSummaryforAccount(Long accountId) {
+            return insightRepository
+                    .findTopByBankAccount_IdAndTypeOrderByCreatedAtDesc(
+                            accountId,
+                            InsightType.SUMMARY
+                    )
+                    .orElse(null);
+        }
 }

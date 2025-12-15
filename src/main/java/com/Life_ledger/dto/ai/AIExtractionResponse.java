@@ -28,7 +28,6 @@ public class AIExtractionResponse {
         private String notes;
     }
 
-    // ⭐ THIS FIXES your "toEntityList" error
     public List<Transaction> toEntityList(FileImport fileImport) {
         List<Transaction> list = new ArrayList<>();
 

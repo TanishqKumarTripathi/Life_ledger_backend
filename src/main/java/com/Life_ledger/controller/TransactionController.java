@@ -2,15 +2,20 @@ package com.Life_ledger.controller;
 
 import com.Life_ledger.dto.transaction.*;
 import com.Life_ledger.dto.usercorrection.*;
+import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.service.TransactionService;
+import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.UserRepository;
 import com.Life_ledger.security.JwtUtil;
 
+import java.math.BigDecimal;
+import java.util.Map;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -21,6 +26,7 @@ public class TransactionController {
     private final TransactionService transactionService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final BankAccountRepository bankAccountRepository;
 
     private User getUserFromToken(String token) {
         token = token.substring(7);
@@ -47,6 +53,16 @@ public class TransactionController {
         return ResponseEntity.ok(transactionService.getTransaction(user.getId(), id));
     }
 
+    @GetMapping("/exists") //checks user have transaction or not
+    public ResponseEntity<Map<String, Boolean>> hasTransactions(
+            @RequestHeader("Authorization") String token) {
+
+        User user = getUserFromToken(token);
+        boolean exists = transactionService.getTransactionCount(user.getId()).compareTo(BigDecimal.ZERO) > 0;
+
+        return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
     @GetMapping
     public ResponseEntity<List<TransactionResponse>> getAllTransactions(
             @RequestHeader("Authorization") String token,
@@ -55,6 +71,28 @@ public class TransactionController {
 
         User user = getUserFromToken(token);
         return ResponseEntity.ok(transactionService.getAllTransactions(user.getId(), bankAccountId, categoryId));
+    }
+
+    @GetMapping("/total-spent")
+    public ResponseEntity<Map<String, Object>> getTotalSpent(@RequestHeader("Authorization") String token) {
+        User user = getUserFromToken(token);
+        BigDecimal totalSpent = transactionService.getTotalSpent(user.getId(), null, null);
+        return ResponseEntity.ok(Map.of("totalSpent", totalSpent));
+    }
+
+    @GetMapping("/count")
+    public ResponseEntity<Map<String, Object>> getTransactionCount(@RequestHeader("Authorization") String token) {
+        User user = getUserFromToken(token);
+        BigDecimal transactionCount = transactionService.getTransactionCount(user.getId());
+        return ResponseEntity.ok(Map.of("transactionCount", transactionCount));
+    }
+
+    @GetMapping("/recent")
+    public ResponseEntity<List<TransactionResponse>> getRecentTransactions(
+            @RequestHeader("Authorization") String token) {
+        User user = getUserFromToken(token);
+        List<TransactionResponse> recentTx = transactionService.getRecentTransactions(user.getId());
+        return ResponseEntity.ok(recentTx);
     }
 
     @PutMapping("/{id}")
@@ -74,6 +112,15 @@ public class TransactionController {
 
         User user = getUserFromToken(token);
         transactionService.deleteTransaction(user.getId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/delete-all")
+    public ResponseEntity<Void> deleteAllTransactions(
+            @RequestHeader("Authorization") String token) {
+
+        User user = getUserFromToken(token);
+        transactionService.deleteAllTransactions(user.getId());
         return ResponseEntity.noContent().build();
     }
 
@@ -111,4 +158,52 @@ public class TransactionController {
         User user = getUserFromToken(token);
         return ResponseEntity.ok(transactionService.getAnomalyTransactions(user.getId()));
     }
+
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<List<TransactionResponse>> getByCategory(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long categoryId) {
+
+        User user = getUserFromToken(token);
+
+        return ResponseEntity.ok(
+                transactionService.getTransactionsByCategory(user.getId(), categoryId));
+    }
+
+    @GetMapping("/month")
+    public ResponseEntity<List<TransactionResponse>> getByBankAccount(
+            @RequestHeader("Authorization") String token,
+            @RequestParam Long bankAccountId,
+            @RequestParam int month,
+            @RequestParam int year) {
+
+        User user = getUserFromToken(token);
+
+        // Optional: verify user owns the account
+        BankAccount account = bankAccountRepository.findById(bankAccountId)
+                .orElseThrow(() -> new RuntimeException("Account not found"));
+
+        if (!account.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        return ResponseEntity.ok(
+                transactionService.getByBankAccount(account.getId(), month, year));
+    }
+
+    @GetMapping("/sort")
+    public ResponseEntity<List<TransactionResponse>> sortTransactions(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(defaultValue = "date") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction) {
+
+        User user = getUserFromToken(token);
+
+        return ResponseEntity.ok(
+                transactionService.sortTransactions(
+                        user.getId(),
+                        sortBy,
+                        direction));
+    }
+
 }

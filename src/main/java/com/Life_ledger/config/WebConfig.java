@@ -13,11 +13,11 @@ public class WebConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:5173")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD")
+                registry.addMapping("/api/auth**")
+                        .allowedOriginPatterns("http://localhost:5173", "http://127.0.0.1:5173")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                         .allowedHeaders("*")
-                        .exposedHeaders("Authorization")
+                        .exposedHeaders("Authorization", "Content-Type")
                         .allowCredentials(true)
                         .maxAge(3600);
             }

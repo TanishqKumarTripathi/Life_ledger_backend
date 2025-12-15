@@ -11,17 +11,24 @@ public interface GoalService {
 
     GoalResponse createGoal(GoalRequest request);
 
-    GoalResponse updateGoal(Long goalId, GoalRequest request);
+    GoalResponse createGoalForAccount(GoalRequest request, Long accountId);
 
-    GoalResponse getGoalById(Long goalId);
-
-    List<GoalResponse> getAllGoals();
+    GoalResponse getGoalByIdAndUser(Long goalId, Long userId);
 
     List<GoalResponse> getGoalsByUser(Long userId);
 
-    void deleteGoal(Long goalId);
+    List<GoalResponse> getGoalsByAccount(Long accountId);
 
-    Optional<String> addContribution(Long goalId, BigDecimal amount);
+    GoalResponse updateGoal(Long goalId, GoalRequest request);
 
-    Optional<String> evaluateNudge(Long goalId);
+    void deleteGoal(Long goalId, Long userId);
+
+    Optional<String> addContribution(Long goalId, BigDecimal amount, Long userId);
+
+    Optional<String> evaluateNudge(Long goalId, Long userId);
+
+    public void deleteAllGoalsByUser(Long userId);
+
+    public void deleteAllGoalsByAccount(Long userId, Long accountId);
+
 }

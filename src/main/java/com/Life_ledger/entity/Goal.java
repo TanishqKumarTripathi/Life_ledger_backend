@@ -1,6 +1,6 @@
 package com.Life_ledger.entity;
 
-import com.Life_ledger.enums.GoalStatus;
+import com.Life_ledger.Enum.GoalStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-import com.Life_ledger.enums.GoalType;
+import com.Life_ledger.Enum.GoalType;
 
 @Entity
 @Table(name = "goals")
@@ -41,13 +41,19 @@ public class Goal {
     private GoalStatus status;
 
     private Double nudgeThreshold;
-    private LocalDateTime createdAt= LocalDateTime.now();
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 
 
     @ManyToOne
     @JoinColumn(name = "user_id")
     @JsonIgnore
     private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "bank_account_id")
+    @JsonIgnore
+    private BankAccount bankAccount;
 }
 
 

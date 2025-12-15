@@ -4,11 +4,16 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
+import com.Life_ledger.Enum.CategorySource;
 import com.Life_ledger.Enum.TransactionEnum;
 
 @Entity
-@Table(name = "transactions")
+@Table(name = "transactions", uniqueConstraints = @UniqueConstraint(columnNames = { "fingerprint", "bank_account_id" }))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,22 +26,25 @@ public class Transaction {
     private Long id;
 
     private String merchant;
-
-    @Column(unique = true)
     private String reference;
-
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
     private TransactionEnum typeTransaction;
 
+    @Enumerated(EnumType.STRING)
+    private CategorySource categorySource;
+
     private LocalDate date;
-
     private String notes;
-
     private boolean recurring;
-
     private boolean anomaly;
+
+    @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
+    private AnomalyRecord anomalyRecord;
+
+    @Column(name = "fingerprint", nullable = false, length = 500, unique = true)
+    private String fingerprint;
 
     @ManyToOne
     @JoinColumn(name = "bank_account_id")
@@ -48,8 +56,17 @@ public class Transaction {
 
     @ManyToOne
     @JoinColumn(name = "category_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Category category;
 
-    @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL)
+    @ManyToOne
+    @JoinColumn(name = "sub_category_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    private SubCategory subCategory;
+
+    @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
     private UserCorrection correction;
+
+    @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<AnomalyRecord> anomalyRecords;
 }
