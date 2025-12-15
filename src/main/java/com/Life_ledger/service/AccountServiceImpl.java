@@ -32,6 +32,7 @@ public class AccountServiceImpl implements AccountService {
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
     private final SubCategoryRepository subCategoryRepository;
+    private final NudgeRepository nudgeRepository;
 
     @Override
     public BankAccount createAccount(Long userId, AccountRequest request) {
@@ -145,6 +146,8 @@ public class AccountServiceImpl implements AccountService {
         subCategoryRepository.deleteByUserId(userId);
         categoryRepository.deleteByUserId(userId);
         fileImportRepository.deleteByUserId(userId);
+
+        nudgeRepository.deleteByUserId(userId);
         goalRepository.deleteByUserId(userId);
 
         // 5️⃣ Delete user LAST
