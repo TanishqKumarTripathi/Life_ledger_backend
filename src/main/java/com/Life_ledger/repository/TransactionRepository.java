@@ -1,6 +1,7 @@
 package com.Life_ledger.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
@@ -22,7 +23,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
   @Query("SELECT t FROM Transaction t WHERE t.bankAccount.user.id = :userId")
   List<Transaction> findAllByUserId(Long userId);
 
-  Optional<Transaction> findByReferenceAndBankAccountId(String reference, Long bankAccountId);
+    @Modifying
+    @Query("delete from Transaction t where t.bankAccount.id in :accountIds")
+    void deleteByBankAccountIds(@Param("accountIds") List<Long> accountIds);
+
+    @Modifying
+    @Query("""
+    delete from Transaction t
+    where t.bankAccount.id in (
+        select b.id from BankAccount b where b.user.id = :userId
+    )
+""")
+    void deleteByUserId(@Param("userId") Long userId);
+    void deleteByBankAccount_User_Id(Long userId);
+
+
+
+
+    Optional<Transaction> findByReferenceAndBankAccountId(String reference, Long bankAccountId);
 
   boolean existsByFingerprintAndBankAccountId(String fingerprint, Long bankAccountId);
 

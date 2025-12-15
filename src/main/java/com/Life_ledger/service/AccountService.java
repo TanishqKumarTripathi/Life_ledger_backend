@@ -18,4 +18,6 @@ public interface AccountService {
 
     List<BankAccountSummaryDto> getUserBankAccounts(Long userId);
 
+    void deleteUserAccount(Long userId);
+
 }

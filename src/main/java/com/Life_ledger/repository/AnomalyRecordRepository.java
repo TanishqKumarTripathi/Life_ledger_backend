@@ -28,4 +28,9 @@ public interface AnomalyRecordRepository extends JpaRepository<AnomalyRecord, Lo
     void deleteByTransactionIdIn(@Param("transactionIds") List<Long> transactionIds);
     
     void deleteByBankAccount_Id(Long bankAccountId);
+    @Modifying
+    @Query("delete from AnomalyRecord i where i.bankAccount.id in :ids")
+    void deleteByBankAccountIds(@Param("ids") List<Long> ids);
+
+
 }

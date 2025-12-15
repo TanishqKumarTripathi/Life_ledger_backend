@@ -3,6 +3,9 @@ package com.Life_ledger.repository;
 import com.Life_ledger.dto.insight.InsightType;
 import com.Life_ledger.entity.Insight;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -27,5 +30,13 @@ public interface InsightRepository extends JpaRepository<Insight, Long> {
     List<Insight> findByBankAccount_User_Id(Long userId);
     
     void deleteByBankAccount_Id(Long bankAccountId);
+    void deleteByBankAccountIdIn(List<Long> accountIds);
+    @Modifying
+    @Query("delete from Insight i where i.bankAccount.id in :ids")
+    void deleteByBankAccountIds(@Param("ids") List<Long> ids);
+
+
+
+
 
 }
