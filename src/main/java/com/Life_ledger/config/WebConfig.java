@@ -1,26 +1,27 @@
-package com.Life_ledger.config;
+// package com.Life_ledger.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+// import org.springframework.context.annotation.Bean;
+// import org.springframework.context.annotation.Configuration;
+// import org.springframework.web.servlet.config.annotation.CorsRegistry;
+// import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-@Configuration
-public class WebConfig {
+// @Configuration
+// public class WebConfig {
 
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/api/auth**")
-                        .allowedOriginPatterns("http://localhost:5173", "http://127.0.0.1:5173")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
-                        .allowedHeaders("*")
-                        .exposedHeaders("Authorization", "Content-Type")
-                        .allowCredentials(true)
-                        .maxAge(3600);
-            }
-        };
-    }
-}
+// @Bean
+// public WebMvcConfigurer corsConfigurer() {
+// return new WebMvcConfigurer() {
+// @Override
+// public void addCorsMappings(CorsRegistry registry) {
+// registry.addMapping("/api/auth**")
+// .allowedOriginPatterns("http://localhost:5173", "http://127.0.0.1:5173",
+// "https://b3jj9tk4-5173.inc1.devtunnels.ms")
+// .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+// .allowedHeaders("*")
+// .exposedHeaders("Authorization", "Content-Type")
+// .allowCredentials(true)
+// .maxAge(3600);
+// }
+// };
+// }
+// }

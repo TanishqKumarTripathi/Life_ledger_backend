@@ -53,6 +53,16 @@ public class TransactionController {
         return ResponseEntity.ok(transactionService.getTransaction(user.getId(), id));
     }
 
+    @GetMapping("/exists") //checks user have transaction or not
+    public ResponseEntity<Map<String, Boolean>> hasTransactions(
+            @RequestHeader("Authorization") String token) {
+
+        User user = getUserFromToken(token);
+        boolean exists = transactionService.getTransactionCount(user.getId()).compareTo(BigDecimal.ZERO) > 0;
+
+        return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
     @GetMapping
     public ResponseEntity<List<TransactionResponse>> getAllTransactions(
             @RequestHeader("Authorization") String token,

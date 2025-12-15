@@ -16,6 +16,7 @@ import com.Life_ledger.entity.Transaction;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.TransactionRepository;
+import com.Life_ledger.util.EncryptionUtil;
 import com.Life_ledger.util.TransactionFingerprintUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class HdfcStatementService {
     private final TransactionRepository transactionRepo;
     private final TransactionFingerprintUtil fingerprintUtil;
     private final RuleBasedCategoryService ruleBasedCategoryService;
+    private final EncryptionUtil encryptionUtil;
 
     public Map<String, Object> parseFile(MultipartFile file, User user) {
 
@@ -59,6 +61,8 @@ public class HdfcStatementService {
             }
             Map<String, Object> parsed = hdfcParser.parse(extractedText, isCsv);
             String accountNumber = parsed.get("accountNumber").toString();
+            String encryptedAccountNumber = encryptionUtil.encrypt(accountNumber);
+
             List<Map<String, Object>> txns = (List<Map<String, Object>>) parsed.get("transactions");
 
             if (accountNumber.equals("UNKNOWN")) {
@@ -68,14 +72,14 @@ public class HdfcStatementService {
             }
 
             BankAccount bankAccount = bankRepo
-                    .findFirstByEncryptedAccountNumberAndUserId(accountNumber, user.getId())
+                    .findFirstByEncryptedAccountNumberAndUserId(encryptedAccountNumber, user.getId())
                     .orElse(null);
 
             boolean newAccount = false;
 
             if (bankAccount == null) {
                 bankAccount = BankAccount.builder()
-                        .encryptedAccountNumber(accountNumber)
+                        .encryptedAccountNumber(encryptedAccountNumber)
                         .last4Digits(accountNumber.substring(accountNumber.length() - 4))
                         .bankName("HDFC")
                         .user(user)

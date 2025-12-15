@@ -13,6 +13,7 @@ public interface InsightService {
     Insight getInsight(Long id);
 
     List<Insight> getInsightsByBankAccountId(Long accountId);
+
     List<Insight> getInsightsByUserId(Long userId);
 
     Insight updateInsight(Long id, String aiText);
@@ -27,18 +28,19 @@ public interface InsightService {
     List<InsightResponseDTO> getInsightsByBankAccountIdDTO(Long accountId);
 
     List<InsightResponseDTO> getInsightsByAccount(Long accountId);
+
     Insight getLatestInsight(Long userId);
 
-    List<InsightResponseDTO> getInsightsByUser(Long userId);
-    
-    InsightSummaryResponse getLatestSummaryByAccount(Long accountId);
-    InsightSummaryResponse getLatestSummaryByUser(Long userId);
+    Insight getLatestSummaryforAccount(Long accountId);
 
-//    // AI Analysis methods
-//    Object getInsightSection(Long userId, String sectionName);
-//    Object getInsightSectionByAccount(Long accountId, String sectionName);
-//    boolean hasRecentAnalysis(Long userId, int hours);
-//    boolean hasRecentAnalysisByAccount(Long accountId, int hours);
-//    Insight getLatestInsightByAccount(Long accountId);
+    // InsightSummaryResponse getLatestSummaryByAccount(Long accountId);
+
+    List<InsightResponseDTO> getInsightsByUser(Long userId);
+    // // AI Analysis methods
+    // Object getInsightSection(Long userId, String sectionName);
+    // Object getInsightSectionByAccount(Long accountId, String sectionName);
+    // boolean hasRecentAnalysis(Long userId, int hours);
+    // boolean hasRecentAnalysisByAccount(Long accountId, int hours);
+    // Insight getLatestInsightByAccount(Long accountId);
 
 }

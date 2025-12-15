@@ -10,22 +10,22 @@ import java.util.Optional;
 
 @Repository
 public interface InsightRepository extends JpaRepository<Insight, Long> {
-//    List<Insight> findByUser_Id(Long userId);
+        // List<Insight> findByUser_Id(Long userId);
 
-    // Fetch insights for a specific bank account
-    List<Insight> findByBankAccount_Id(Long bankAccountId);
+        // Fetch insights for a specific bank account
+        List<Insight> findByBankAccount_Id(Long bankAccountId);
 
-    void deleteByBankAccount_IdAndTypeAndPeriod(
-            Long bankAccountId,
-            InsightType type,
-            String period);
+        // void deleteByBankAccount_IdAndTypeAndPeriod(
+        // Long bankAccountId,
+        // InsightType type,
+        // String period);
 
-    Optional<Insight> findTopByBankAccount_IdAndTypeOrderByCreatedAtDesc(
-            Long bankAccountId,
-            InsightType type);
+        Optional<Insight> findTopByBankAccount_IdAndTypeOrderByCreatedAtDesc(
+                        Long bankAccountId,
+                        InsightType type);
 
-    List<Insight> findByBankAccount_User_Id(Long userId);
-    
-    void deleteByBankAccount_Id(Long bankAccountId);
+        List<Insight> findByBankAccount_User_Id(Long userId);
+
+        void deleteByBankAccount_Id(Long bankAccountId);
 
 }

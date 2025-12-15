@@ -241,7 +241,7 @@ public class InsightController {
         BankAccount account = bankAccountRepository.findById(accountId)
                 .orElseThrow(() -> new RuntimeException("Bank account not found"));
         if (!account.getUser().getId().equals(user.getId())) {
-            return ResponseEntity.status(403).body(Map.of(
+            return ResponseEntity.status(400).body(Map.of(
                     "status", "error",
                     "message", "Access denied"));
         }
@@ -253,5 +253,38 @@ public class InsightController {
                 "count", insights.size(),
                 "insights", insights));
     }
+    @GetMapping("/account/{accountId}/summary")
+    public ResponseEntity<?> getSummaryByAccount(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Long accountId) {
+
+        User user = getUserFromToken(authorization);
+
+        BankAccount account = bankAccountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Bank account not found"));
+
+        if (!account.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "status", "error",
+                    "message", "Access denied"
+            ));
+        }
+
+        Insight summary = insightService.getLatestSummaryforAccount(accountId);
+
+        if (summary == null) {
+            return ResponseEntity.ok(Map.of(
+                    "status", "empty",
+                    "message", "No summary available. Run analysis first."
+            ));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "summary", InsightResponseDTO.fromEntity(summary)
+        ));
+    }
+
+
 
 }

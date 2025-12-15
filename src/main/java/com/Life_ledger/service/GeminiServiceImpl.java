@@ -545,7 +545,6 @@ public class GeminiServiceImpl implements GeminiService {
 
         return """
                 STRICT RULES:
-                - Give Amount in rupees
                 - Output ONLY valid JSON
                 - No markdown
                 - No explanations
@@ -553,6 +552,10 @@ public class GeminiServiceImpl implements GeminiService {
                 - Omit unknown fields
 
                                 You are LifeLedger's Anomaly detector.
+                                - Amount > 2x usual for same merchant OR
+                                - First-time high-value transaction OR
+                                - Rare merchant with unusually high spend
+                                - If anomaly confidence is low, still include it with reason "unusual pattern"
                                 Output STRICT JSON:
                                 {
                                   "anomalies":[ { "id":0, "reason":"string" } ],
@@ -851,10 +854,10 @@ public class GeminiServiceImpl implements GeminiService {
             String period = YearMonth.now().toString(); // "2025-12"
 
             // ✅ REPLACE existing summary for same period
-            insightRepository.deleteByBankAccount_IdAndTypeAndPeriod(
-                    accountId,
-                    InsightType.SUMMARY,
-                    period);
+            // insightRepository.deleteByBankAccount_IdAndTypeAndPeriod(
+            // accountId,
+            // InsightType.SUMMARY,
+            // period);
 
             String fullJson = objectMapper.writeValueAsString(summaryJson);
 
@@ -862,8 +865,9 @@ public class GeminiServiceImpl implements GeminiService {
                     .bankAccount(account)
                     .type(InsightType.SUMMARY)
                     .period(period)
-                    .aiText(summaryJson.toString()) // ✅ String OK here
-                    .summaryJson(summaryJson) // ✅ JsonNode ONLY
+                    .summaryJson(summaryJson)
+                    .aiText(summaryJson.toString())
+                    .createdAt(LocalDateTime.now())
                     .build();
 
             insightRepository.save(insight);

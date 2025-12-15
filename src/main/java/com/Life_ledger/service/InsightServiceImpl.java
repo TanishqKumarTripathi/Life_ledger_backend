@@ -3,12 +3,12 @@ package com.Life_ledger.service;
 import com.Life_ledger.dto.insight.InsightResponseDTO;
 import com.Life_ledger.dto.insight.InsightSummaryResponse;
 import com.Life_ledger.dto.insight.InsightType;
-import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.Insight;
 import com.Life_ledger.repository.BankAccountRepository;
 import com.Life_ledger.repository.InsightRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +44,7 @@ public class InsightServiceImpl implements InsightService {
 
     @Override
     public List<Insight> getInsightsByUserId(Long userId) {
-        return insightRepository.findByBankAccount_User_Id(userId);
+        return List.of();
     }
 
     @Override
@@ -61,16 +61,7 @@ public class InsightServiceImpl implements InsightService {
 
     @Override
     public List<InsightResponseDTO> getInsightsByUserIdDTO(Long userId) {
-        return insightRepository.findByBankAccount_User_Id(userId)
-                .stream()
-                .map(insight -> {
-                    InsightResponseDTO dto = new InsightResponseDTO();
-                    dto.setId(insight.getId());
-                    dto.setAiText(insight.getAiText());
-                    dto.setCreatedAt(insight.getCreatedAt());
-                    return dto;
-                })
-                .toList();
+        return List.of();
     }
 
     @Override
@@ -123,8 +114,7 @@ public class InsightServiceImpl implements InsightService {
 
     @Override
     public Insight getLatestInsight(Long userId) {
-        List<Insight> insights = insightRepository.findByBankAccount_User_Id(userId);
-        return insights.isEmpty() ? null : insights.get(insights.size() - 1);
+        return null;
     }
 
     @Override
@@ -142,65 +132,22 @@ public class InsightServiceImpl implements InsightService {
                 .toList();
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public InsightSummaryResponse getLatestSummaryByAccount(Long accountId) {
-        return insightRepository.findTopByBankAccount_IdAndTypeOrderByCreatedAtDesc(accountId, InsightType.SUMMARY)
-                .map(this::convertToSummaryResponse)
-                .orElse(null);
-    }
+    // @Override
+    // @Transactional(readOnly = true)
+    // public InsightSummaryResponse getLatestSummaryByAccount(Long accountId) {
+    // return
+    // insightRepository.findTopByBankAccount_IdAndTypeOrderByCreatedAtDesc(accountId,
+    // InsightType.SUMMARY)
+    // .map(this::convertToSummaryResponse)
+    // .orElse(null);
+    // }
 
     @Override
-    @Transactional(readOnly = true)
-    public InsightSummaryResponse getLatestSummaryByUser(Long userId) {
-        List<BankAccount> accounts = bankAccountRepository.findByUserId(userId);
-        return accounts.stream()
-                .map(acc -> getLatestSummaryByAccount(acc.getId()))
-                .filter(summary -> summary != null)
-                .findFirst()
+    public Insight getLatestSummaryforAccount(Long accountId) {
+        return insightRepository
+                .findTopByBankAccount_IdAndTypeOrderByCreatedAtDesc(
+                        accountId,
+                        InsightType.SUMMARY)
                 .orElse(null);
-    }
-
-    private InsightSummaryResponse convertToSummaryResponse(Insight insight) {
-        try {
-            JsonNode root = insight.getSummaryJson();
-            if (root == null || root.isNull())
-                return null;
-
-            InsightSummaryResponse response = new InsightSummaryResponse();
-            response.setId(insight.getId());
-            response.setCreatedAt(insight.getCreatedAt());
-            response.setPeriod(insight.getPeriod());
-
-            // Summary
-            JsonNode summaryNode = root.path("summary");
-            if (!summaryNode.isMissingNode()) {
-                InsightSummaryResponse.SummaryData summary = new InsightSummaryResponse.SummaryData();
-                summary.setText(summaryNode.path("text").asText(null));
-                summary.setTone(summaryNode.path("tone").asText(null));
-                summary.setEmoji(summaryNode.path("emoji").asText(null));
-                summary.setColor(summaryNode.path("color").asText(null));
-                response.setSummary(summary);
-            }
-
-            // Nudges
-            JsonNode nudgesNode = root.path("nudges");
-            if (nudgesNode.isArray()) {
-                List<InsightSummaryResponse.NudgeData> nudges = new java.util.ArrayList<>();
-                for (JsonNode nudge : nudgesNode) {
-                    InsightSummaryResponse.NudgeData nudgeData = new InsightSummaryResponse.NudgeData();
-                    nudgeData.setType(nudge.path("type").asText(null));
-                    nudgeData.setText(nudge.path("text").asText(null));
-                    nudgeData.setTone(nudge.path("tone").asText(null));
-                    nudgeData.setEmoji(nudge.path("emoji").asText(null));
-                    nudges.add(nudgeData);
-                }
-                response.setNudges(nudges);
-            }
-
-            return response;
-        } catch (Exception e) {
-            return null;
-        }
     }
 }
