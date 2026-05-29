@@ -46,7 +46,7 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return null; // or add roles if needed
+            return java.util.Collections.emptyList(); // or add roles if needed
     }
 
     @Override

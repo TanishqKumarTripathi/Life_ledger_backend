@@ -212,7 +212,7 @@ public class GeminiServiceImpl implements GeminiService {
                     .limit(MAX_ANOMALY_TXNS)
                     .toList();
 
-            if (txns.size() < 15) {
+            if (txns.size() < 2) {
                 log.info("Skipping anomalies – insufficient data");
                 return;
             }

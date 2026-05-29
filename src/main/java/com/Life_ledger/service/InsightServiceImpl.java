@@ -1,7 +1,6 @@
 package com.Life_ledger.service;
 
 import com.Life_ledger.dto.insight.InsightResponseDTO;
-import com.Life_ledger.dto.insight.InsightSummaryResponse;
 import com.Life_ledger.dto.insight.InsightType;
 import com.Life_ledger.entity.Insight;
 import com.Life_ledger.repository.BankAccountRepository;

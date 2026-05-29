@@ -55,4 +55,7 @@ public class Insight {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
+
 }
+
+    

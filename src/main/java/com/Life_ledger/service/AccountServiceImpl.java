@@ -6,12 +6,7 @@ import com.Life_ledger.dto.account.BankAccountSummaryDto;
 import com.Life_ledger.entity.BankAccount;
 import com.Life_ledger.entity.User;
 import com.Life_ledger.mapper.AccountMapper;
-import com.Life_ledger.repository.AnomalyRecordRepository;
-import com.Life_ledger.repository.BankAccountRepository;
-import com.Life_ledger.repository.GoalRepository;
-import com.Life_ledger.repository.InsightRepository;
-import com.Life_ledger.repository.RecurringPatternRepository;
-import com.Life_ledger.repository.UserRepository;
+import com.Life_ledger.repository.*;
 
 import com.Life_ledger.util.EncryptionUtil;
 
@@ -28,11 +23,16 @@ public class AccountServiceImpl implements AccountService {
 
     private final BankAccountRepository bankAccountRepository;
     private final UserRepository userRepository;
+    private final FileImportRepository fileImportRepository;
+    private final GoalRepository goalRepository;
     private final RecurringPatternRepository recurringPatternRepository;
     private final AnomalyRecordRepository anomalyRecordRepository;
-    private final GoalRepository goalRepository;
     private final InsightRepository insightRepository;
     private final EncryptionUtil encryptionUtil;
+    private final TransactionRepository transactionRepository;
+    private final CategoryRepository categoryRepository;
+    private final SubCategoryRepository subCategoryRepository;
+    private final NudgeRepository nudgeRepository;
 
     @Override
     public BankAccount createAccount(Long userId, AccountRequest request) {
@@ -109,7 +109,7 @@ public class AccountServiceImpl implements AccountService {
         
         // 2. Delete anomaly records
         anomalyRecordRepository.deleteByBankAccount_Id(accountId);
-        
+
         // 3. Delete goals
         goalRepository.deleteByBankAccount_Id(accountId);
         
@@ -122,6 +122,40 @@ public class AccountServiceImpl implements AccountService {
         bankAccountRepository.delete(existing);
         return "Account deleted";
     }
+
+    @Override
+    @Transactional
+    public void deleteUserAccount(Long userId) {
+
+        // 1️⃣ Collect bank account IDs first
+        List<Long> accountIds = bankAccountRepository.findIdsByUserId(userId);
+
+        if (!accountIds.isEmpty()) {
+
+            // 2️⃣ Delete ALL data that depends on bank accounts
+            anomalyRecordRepository.deleteByBankAccountIds(accountIds);
+            transactionRepository.deleteByBankAccountIds(accountIds);
+            recurringPatternRepository.deleteByBankAccountIds(accountIds);
+            insightRepository.deleteByBankAccountIds(accountIds);
+
+            // 3️⃣ Delete bank accounts themselves
+            bankAccountRepository.deleteByIdIn(accountIds);
+        }
+
+        // 4️⃣ Delete user-rooted data (independent of accounts)
+        subCategoryRepository.deleteByUserId(userId);
+        categoryRepository.deleteByUserId(userId);
+        fileImportRepository.deleteByUserId(userId);
+
+        nudgeRepository.deleteByUserId(userId);
+        goalRepository.deleteByUserId(userId);
+
+        // 5️⃣ Delete user LAST
+        userRepository.deleteById(userId);
+    }
+
+
+
 
     @Override
     public List<BankAccountSummaryDto> getUserBankAccounts(Long userId) {

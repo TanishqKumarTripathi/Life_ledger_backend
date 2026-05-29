@@ -3,6 +3,7 @@ package com.Life_ledger.repository;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -27,8 +28,13 @@ public interface RecurringPatternRepository extends JpaRepository<RecurringPatte
        boolean existsByBankAccount_IdAndMerchantIgnoreCase(Long bankAccountId, String merchant);
        
        void deleteByBankAccount_Id(Long bankAccountId);
-       
-       void deleteByBankAccount_User_Id(Long userId);
+       @Modifying
+       @Query("delete from RecurringPattern i where i.bankAccount.id in :ids")
+        void deleteByBankAccountIds(@Param("ids") List<Long> ids);
+
+
+
+    void deleteByBankAccount_User_Id(Long userId);
 }
 
 // @Query("SELECT rp FROM RecurringPattern rp " +

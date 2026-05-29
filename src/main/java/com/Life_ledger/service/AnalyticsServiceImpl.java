@@ -193,17 +193,17 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     // ---------------------- Recurring vs One-time -------------------------------
 
     private RecurringVsOneTimeDto buildRecurringSplit(List<NormalizedTransaction> txns) {
-        double recurringTotal = txns.stream()
-                .filter(NormalizedTransaction::isExpense)
-                .filter(NormalizedTransaction::isRecurring)
-                .mapToDouble(t -> t.getSignedAmount().abs().doubleValue())
-                .sum();
 
-        double oneTimeTotal = txns.stream()
+        Map<Boolean, Double> totals = txns.stream()
                 .filter(NormalizedTransaction::isExpense)
-                .filter(t -> !t.isRecurring())
-                .mapToDouble(t -> t.getSignedAmount().abs().doubleValue())
-                .sum();
+                .filter(t -> t.getSignedAmount() != null)
+                .collect(Collectors.partitioningBy(
+                        NormalizedTransaction::isRecurring,
+                        Collectors.summingDouble(t -> t.getSignedAmount().abs().doubleValue())
+                ));
+
+        double recurringTotal = totals.getOrDefault(true, 0.0);
+        double oneTimeTotal = totals.getOrDefault(false, 0.0);
 
         return new RecurringVsOneTimeDto(recurringTotal, oneTimeTotal);
     }
@@ -299,34 +299,42 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     }
 
     private AnalyticsDTO.AveragesData buildAveragesData(List<NormalizedTransaction> txns) {
-        List<NormalizedTransaction> expenses = txns.stream().filter(NormalizedTransaction::isExpense).toList();
+
+        List<NormalizedTransaction> expenses = txns.stream()
+                .filter(NormalizedTransaction::isExpense)
+                .filter(t -> t.getSignedAmount() != null && t.getDate() != null)
+                .toList();
+
+        AnalyticsDTO.AveragesData data = new AnalyticsDTO.AveragesData();
 
         if (expenses.isEmpty()) {
-            AnalyticsDTO.AveragesData data = new AnalyticsDTO.AveragesData();
             data.setDailySpending(0.0);
             data.setWeeklySpending(0.0);
             data.setMonthlySpending(0.0);
             return data;
         }
 
-        LocalDate minDate = expenses.stream().map(NormalizedTransaction::getDate).filter(Objects::nonNull).min(LocalDate::compareTo).orElse(LocalDate.now());
-        LocalDate maxDate = expenses.stream().map(NormalizedTransaction::getDate).filter(Objects::nonNull).max(LocalDate::compareTo).orElse(LocalDate.now());
+        Map<YearMonth, Double> monthlyTotals = expenses.stream()
+                .collect(Collectors.groupingBy(
+                        t -> YearMonth.from(t.getDate()),
+                        Collectors.summingDouble(t -> t.getSignedAmount().abs().doubleValue())
+                ));
 
-        long days = ChronoUnit.DAYS.between(minDate, maxDate) + 1;
-        if (days <= 0) days = 1;
+        double avgMonthly = monthlyTotals.values().stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0);
 
-        double totalAmount = expenses.stream().mapToDouble(t -> t.getSignedAmount().abs().doubleValue()).sum();
+        double avgDaily = avgMonthly / 30.0;
+        double avgWeekly = avgDaily * 7.0;
 
-        double daily = totalAmount / (double) days;
-        double weekly = daily * 7.0;
-        double monthly = daily * 30.0;
+        data.setDailySpending(avgDaily);
+        data.setWeeklySpending(avgWeekly);
+        data.setMonthlySpending(avgMonthly);
 
-        AnalyticsDTO.AveragesData data = new AnalyticsDTO.AveragesData();
-        data.setDailySpending(daily);
-        data.setWeeklySpending(weekly);
-        data.setMonthlySpending(monthly);
         return data;
     }
+
 
     private AnalyticsDTO.YearOverYearData buildYearOverYearData(List<NormalizedTransaction> txns) {
         LocalDate now = LocalDate.now();

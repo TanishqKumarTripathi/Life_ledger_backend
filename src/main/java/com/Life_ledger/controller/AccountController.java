@@ -97,7 +97,21 @@ public class AccountController {
                 return ResponseEntity.ok(msg);
         }
 
-        @PutMapping("/{accountId}")
+    @DeleteMapping("/me")
+    public ResponseEntity<?> deleteMyAccount(
+            @RequestHeader("Authorization") String token) {
+
+        token = token.substring(7);
+        Long userId = jwtUtil.extractUserId(token, userRepository);
+
+        accountService.deleteUserAccount(userId);
+
+        return ResponseEntity.ok().build();
+    }
+
+
+
+    @PutMapping("/{accountId}")
         public ResponseEntity<AccountResponse> updateAccount(
                         @RequestHeader("Authorization") String token,
                         @PathVariable Long accountId,
